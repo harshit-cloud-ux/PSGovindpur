@@ -1,64 +1,53 @@
 import React from 'react';
-import { Text } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 
-import HomeScreen     from '../screens/HomeScreen';
-import AcademicScreen from '../screens/AcademicScreen';
-import DailyScreen    from '../screens/DailyScreen';
-import GalleryScreen  from '../screens/GalleryScreen';
-import MoreScreen     from '../screens/MoreScreen';
+import HomeScreen from '../screens/HomeScreen';
 
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
-const TABS = [
-  { name: 'Home',     label: 'होम',     icon: 'home',     component: HomeScreen     },
-  { name: 'Academic', label: 'शैक्षिक', icon: 'book',     component: AcademicScreen },
-  { name: 'Daily',    label: 'दैनिक',   icon: 'calendar', component: DailyScreen    },
-  { name: 'Gallery',  label: 'गैलरी',   icon: 'images',   component: GalleryScreen  },
-  { name: 'More',     label: 'अधिक',    icon: 'grid',     component: MoreScreen     },
-];
+function HomeWithTab() {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1 }}>
+      <HomeScreen />
+      <View style={[styles.tabBar, { paddingBottom: insets.bottom || 10 }]}>
+        <View style={styles.tabCenter}>
+          <TouchableOpacity style={styles.homeBtn} activeOpacity={0.85}>
+            <Ionicons name="home" size={24} color={COLORS.saffron} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function AppNavigator() {
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => {
-        const tab = TABS.find(t => t.name === route.name);
-        return {
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons
-              name={focused ? tab.icon : `${tab.icon}-outline`}
-              size={size}
-              color={color}
-            />
-          ),
-          tabBarLabel: ({ color }) => (
-            <Text style={{
-              fontSize:     10,
-              color,
-              fontFamily:   'NotoSansDevanagari_400Regular',
-              marginBottom: 2,
-            }}>
-              {tab.label}
-            </Text>
-          ),
-          tabBarActiveTintColor:   COLORS.saffron,
-          tabBarInactiveTintColor: COLORS.inkLight,
-          tabBarStyle: {
-            backgroundColor: COLORS.white,
-            borderTopColor:  COLORS.border,
-            borderTopWidth:  1,
-            height:          62,
-            paddingTop:      6,
-          },
-          headerShown: false,
-        };
-      }}
-    >
-      {TABS.map(tab => (
-        <Tab.Screen key={tab.name} name={tab.name} component={tab.component} />
-      ))}
-    </Tab.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Home" component={HomeWithTab} />
+    </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+  backgroundColor: COLORS.navyPrimary,
+  paddingTop: 8,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+  tabCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 6,
+  },
+});

@@ -1,3 +1,4 @@
+import { AuthProvider } from './src/context/AuthContext';
 import React, { useCallback } from 'react';
 import { View, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -26,11 +27,13 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
+    <AuthProvider>
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <StatusBar backgroundColor={COLORS.navyPrimary} barStyle="light-content" />
       <NavigationContainer>
         <AppNavigator />
       </NavigationContainer>
     </GestureHandlerRootView>
+  </AuthProvider>
   );
 }

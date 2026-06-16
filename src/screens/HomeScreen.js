@@ -1,20 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, Dimensions, Animated, Image, Pressable,
+  Dimensions, Animated, Image, Pressable, TouchableOpacity, Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
+import SidePanel from '../components/SidePanel';
+import AdminBanner from '../components/AdminBanner';
+import LoginScreen from './LoginScreen';
 import { COLORS } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 const CARD_W    = (width - 44) / 2;
 
-// ── Image assets ──
 const IMG = {
   pm: require('../assets/images/pm.jpg'),
   cm: require('../assets/images/cm.jpg'),
+  schoolLogo: require('../assets/images/school-logo.png'),
   patriotic: [
     require('../assets/images/patriotic1.jpg'),
     require('../assets/images/patriotic2.jpg'),
@@ -23,14 +27,16 @@ const IMG = {
 };
 
 const QUICK_ACTIONS = [
-  { icon: 'time',          label: 'समय-सारणी',   gradient: ['#1A3A6B','#2D5AA0'], tab: 'Academic' },
-  { icon: 'stats-chart',   label: 'परीक्षा अंक', gradient: ['#C2410C','#E07B39'], tab: 'Academic' },
-  { icon: 'people',        label: 'अनुपस्थित',   gradient: ['#138808','#1A9C0A'], tab: 'Daily'    },
-  { icon: 'pencil',        label: 'गृहकार्य',    gradient: ['#6D28D9','#8B5CF6'], tab: 'Daily'    },
-  { icon: 'images',        label: 'गैलरी',       gradient: ['#BE185D','#EC4899'], tab: 'Gallery'  },
-  { icon: 'trophy',        label: 'हाउस',        gradient: ['#B45309','#F59E0B'], tab: 'Daily'    },
-  { icon: 'videocam',      label: 'वीडियो',      gradient: ['#0369A1','#0EA5E9'], tab: 'Academic' },
-  { icon: 'document-text', label: 'ई-पुस्तकें', gradient: ['#065F46','#059669'], tab: 'Academic' },
+  { icon: 'time',               label: 'समय-सारणी',       sublabel: 'Timetable',       gradient: ['#1A3A6B','#2D5AA0'] },
+  { icon: 'stats-chart',        label: 'परीक्षा',     sublabel: 'Exam',      gradient: ['#C2410C','#E07B39'] },
+  { icon: 'people',             label: 'अटेंडेंस',        sublabel: 'Attendance',          gradient: ['#138808','#1A9C0A'] },
+  { icon: 'pencil',             label: 'गृहकार्य',         sublabel: 'Homework',        gradient: ['#6D28D9','#8B5CF6'] },
+  { icon: 'images',             label: 'गैलरी',            sublabel: 'Gallery',         gradient: ['#BE185D','#EC4899'] },
+  { icon: 'trophy',             label: 'हाउस',             sublabel: 'House',           gradient: ['#B45309','#F59E0B'] },
+  { icon: 'videocam',           label: 'वीडियो',           sublabel: 'Video',           gradient: ['#0369A1','#0EA5E9'] },
+  { icon: 'document-text',      label: 'ई-पुस्तकें',      sublabel: 'E-Books',         gradient: ['#065F46','#059669'] },
+  { icon: 'calendar',           label: 'वार्षिक कैलेंडर',  sublabel: 'Annual Calendar', gradient: ['#7C3AED','#A855F7'] },
+  { icon: 'information-circle', label: 'अबाउट',            sublabel: 'About',           gradient: ['#0F766E','#14B8A6'] },
 ];
 
 const TICKER = [
@@ -42,7 +48,6 @@ const TICKER = [
   { text: 'दीक्षा ऐप',                  img: require('../assets/images/ticker6.png') },
 ];
 
-// ── Entrance animation ──
 function FadeIn({ children, delay = 0, style, from = 30 }) {
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(from)).current;
@@ -59,7 +64,6 @@ function FadeIn({ children, delay = 0, style, from = 30 }) {
   );
 }
 
-// ── Ticker ──
 function Ticker() {
   const x      = useRef(new Animated.Value(0)).current;
   const ITEM_W = 260;
@@ -94,7 +98,6 @@ const tk = StyleSheet.create({
   text:  { color: '#FFE8CC', fontSize: 15, fontFamily: 'NotoSansDevanagari_700Bold' },
 });
 
-// ── Pulsing ring ──
 function PulsingRing({ delay = 0 }) {
   const scale   = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(0.5)).current;
@@ -119,29 +122,42 @@ function PulsingRing({ delay = 0 }) {
   return <Animated.View style={[s.ring, { transform: [{ scale }], opacity }]} />;
 }
 
-// ── Rotating patriotic banner (smooth synced cycling) ──
 function PatrioticBanner() {
   const [idx, setIdx] = useState(0);
-  const fade = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
   const imgs = IMG.patriotic;
+
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(fade, { toValue: 0, duration: 500, useNativeDriver: true }).start(() => {
-        setIdx(p => (p + 1) % imgs.length);
-        Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }).start(() => {
+        setIdx(prev => (prev + 1) % imgs.length);
+        opacity.setValue(0);
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
       });
     }, 3500);
     return () => clearInterval(interval);
   }, []);
+
   return (
     <View style={s.bannerWrap}>
-      <Animated.Image
-        source={imgs[idx]}
-        style={[s.bannerImg, { opacity: fade }]}
-        resizeMode="cover"
-      />
+      {imgs.map((src, i) => (
+        <Animated.Image
+          key={i}
+          source={src}
+          style={[s.bannerImg, { opacity: i === idx ? opacity : 0 }]}
+          resizeMode="cover"
+        />
+      ))}
       <LinearGradient
-        colors={['rgba(8,20,42,0.1)','rgba(8,20,42,0.55)']}
+        colors={['rgba(8,20,42,0.1)', 'rgba(8,20,42,0.55)']}
         style={StyleSheet.absoluteFill}
       />
       <View style={s.bannerCaption}>
@@ -156,14 +172,13 @@ function PatrioticBanner() {
   );
 }
 
-// ── Action card with press spring ──
-function ActionCard({ action, onPress, delay }) {
+function ActionCard({ action, delay }) {
   const scale = useRef(new Animated.Value(1)).current;
   const pressIn  = () => Animated.spring(scale, { toValue: 0.94, useNativeDriver: true }).start();
   const pressOut = () => Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
   return (
     <FadeIn delay={delay}>
-      <Pressable onPressIn={pressIn} onPressOut={pressOut} onPress={onPress}>
+      <Pressable onPressIn={pressIn} onPressOut={pressOut}>
         <Animated.View style={[s.actionBtn, { transform: [{ scale }] }]}>
           <LinearGradient
             colors={action.gradient}
@@ -172,9 +187,10 @@ function ActionCard({ action, onPress, delay }) {
           >
             <View style={s.actionSheen} />
             <View style={s.actionIcon}>
-              <Ionicons name={action.icon} size={30} color="#fff" />
+              <Ionicons name={action.icon} size={28} color="#fff" />
             </View>
             <Text style={s.actionLbl}>{action.label}</Text>
+            <Text style={s.actionSub}>{action.sublabel}</Text>
           </LinearGradient>
         </Animated.View>
       </Pressable>
@@ -182,50 +198,62 @@ function ActionCard({ action, onPress, delay }) {
   );
 }
 
-// ── Main ──
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const today  = new Date().toLocaleDateString('hi-IN', {
+  const { isAdmin } = useAuth();
+  const [sidePanelOpen, setSidePanelOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  const today = new Date().toLocaleDateString('hi-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
-
-      {/* Tricolor stripe */}
       <View style={s.tricolor}>
         <View style={[s.stripe, { backgroundColor: '#FF9933' }]} />
         <View style={[s.stripe, { backgroundColor: '#fff'    }]} />
         <View style={[s.stripe, { backgroundColor: '#138808' }]} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} bounces>
+      {isAdmin && <AdminBanner />}
 
-        {/* HERO */}
+      <ScrollView showsVerticalScrollIndicator={false} bounces>
         <LinearGradient
           colors={['#060F24','#0F2347','#1A3A6B','#1E4D8C']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={s.hero}
         >
+          {/* 3-dot menu button */}
+          <TouchableOpacity
+            style={s.menuBtn}
+            onPress={() => setSidePanelOpen(true)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+          </TouchableOpacity>
+
           <FadeIn from={0} style={s.emblemWrap}>
             <PulsingRing delay={0} />
             <PulsingRing delay={700} />
             <View style={s.emblem}>
-              <Ionicons name="school" size={44} color={COLORS.gold} />
+              <Image source={IMG.schoolLogo} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
             </View>
           </FadeIn>
 
           <FadeIn delay={250}>
-            <Text style={s.heroLabel}>प्राथमिक विद्यालय</Text>
-            <Text style={s.heroName}>गोविंदपुर</Text>
-            <Text style={s.heroSub}>P.S. Govindpur  ·  उत्तर प्रदेश  ·  स्थापना 1962</Text>
+            
+            <Text style={s.heroName}>प्राथमिक विद्यालय गोविंदपुर</Text>
+            <Text style={s.heroSub}>P.S. Govindpur  ·  उत्तर प्रदेश</Text>
           </FadeIn>
 
           <FadeIn delay={430} style={s.pills}>
-            {[['412','छात्र'],['14','शिक्षक'],['94%','उपस्थिति']].map(([n,l]) => (
+            {[['412','छात्र','Students'],['14','शिक्षक','Teachers'],['94%','उपस्थिति','Attendance']].map(([n,l,e]) => (
               <View key={l} style={s.pill}>
                 <Text style={s.pillNum}>{n}</Text>
                 <Text style={s.pillLbl}>{l}</Text>
+                <Text style={s.pillEng}>{e}</Text>
               </View>
             ))}
           </FadeIn>
@@ -236,15 +264,12 @@ export default function HomeScreen({ navigation }) {
           </FadeIn>
         </LinearGradient>
 
-        {/* Ticker */}
         <Ticker />
 
-        {/* Patriotic banner */}
         <FadeIn delay={150} style={s.bannerOuter}>
           <PatrioticBanner />
         </FadeIn>
 
-        {/* PM / CM card */}
         <FadeIn delay={250} style={s.leaderWrap}>
           <LinearGradient
             colors={['#060F24','#0F2347','#1A3A6B']}
@@ -276,7 +301,6 @@ export default function HomeScreen({ navigation }) {
           </LinearGradient>
         </FadeIn>
 
-        {/* QUICK ACTIONS */}
         <View style={s.section}>
           <View style={s.secHead}>
             <View style={s.secBar} />
@@ -284,19 +308,14 @@ export default function HomeScreen({ navigation }) {
           </View>
           <View style={s.grid}>
             {QUICK_ACTIONS.map((a, i) => (
-              <ActionCard
-                key={i}
-                action={a}
-                delay={80 + i * 70}
-                onPress={() => navigation.navigate(a.tab)}
-              />
+              <ActionCard key={i} action={a} delay={80 + i * 70} />
             ))}
           </View>
         </View>
 
-        {/* CTA */}
-        <FadeIn delay={760} style={s.section}>
-          <TouchableOpacity onPress={() => navigation.navigate('More')} activeOpacity={0.85}>
+        {/* Registration CTA — admin only */}
+        {isAdmin && (
+          <FadeIn delay={760} style={s.section}>
             <LinearGradient
               colors={['#0A6B0A','#138808','#1AA81A']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -307,15 +326,35 @@ export default function HomeScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.ctaMain}>नए छात्र का पंजीकरण करें</Text>
-                <Text style={s.ctaSub}>सत्र 2026-27  ·  प्रवेश अभी खुला है</Text>
+                <Text style={s.ctaSub}>New Student Registration  ·  Session 2026-27</Text>
               </View>
               <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.85)" />
             </LinearGradient>
-          </TouchableOpacity>
-        </FadeIn>
+          </FadeIn>
+        )}
 
-        <View style={{ height: 36 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* Side panel */}
+      <SidePanel
+        visible={sidePanelOpen}
+        onClose={() => setSidePanelOpen(false)}
+        onLoginPress={() => {
+          setSidePanelOpen(false);
+          setTimeout(() => setLoginOpen(true), 250);
+        }}
+      />
+
+      {/* Login screen */}
+      <Modal
+        visible={loginOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setLoginOpen(false)}
+      >
+        <LoginScreen onClose={() => setLoginOpen(false)} />
+      </Modal>
     </View>
   );
 }
@@ -325,15 +364,23 @@ const s = StyleSheet.create({
   tricolor:  { flexDirection: 'row', height: 5 },
   stripe:    { flex: 1 },
 
-  // Hero
-  hero:      { paddingHorizontal: 20, paddingTop: 36, paddingBottom: 28, alignItems: 'center', overflow: 'hidden' },
-  emblemWrap:{ width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  ring:      { position: 'absolute', width: 90, height: 90, borderRadius: 45, borderWidth: 2, borderColor: COLORS.gold },
+  menuBtn: {
+    position: 'absolute', top: 12, right: 14, zIndex: 10,
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  hero:      { paddingHorizontal: 20, paddingTop: 50, paddingBottom: 28, alignItems: 'center', overflow: 'hidden' },
+  emblemWrap:{ width: 150, height: 150, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  ring:      { position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 2, borderColor: COLORS.gold },
   emblem: {
-    width: 90, height: 90, borderRadius: 45,
+    width: 140, height: 140, borderRadius: 70,
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: COLORS.gold, elevation: 8,
+    overflow: 'hidden',
   },
   heroLabel: { color: COLORS.saffronLight, fontSize: 14, fontFamily: 'NotoSansDevanagari_400Regular', textAlign: 'center', letterSpacing: 1 },
   heroName:  { color: '#fff', fontSize: 44, fontFamily: 'NotoSansDevanagari_700Bold', textAlign: 'center', lineHeight: 54, marginTop: 2 },
@@ -342,11 +389,12 @@ const s = StyleSheet.create({
   pills:     { flexDirection: 'row', gap: 10, marginTop: 20 },
   pill: {
     alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
   },
   pillNum:   { color: COLORS.gold, fontSize: 17, fontWeight: '800' },
   pillLbl:   { color: '#8EB4D8', fontSize: 10, fontFamily: 'NotoSansDevanagari_400Regular', marginTop: 1 },
+  pillEng:   { color: 'rgba(142,180,216,0.6)', fontSize: 8, marginTop: 1 },
 
   datePill: {
     flexDirection: 'row', alignItems: 'center', marginTop: 16,
@@ -356,7 +404,6 @@ const s = StyleSheet.create({
   },
   dateText:  { color: COLORS.saffronLight, fontSize: 11, fontFamily: 'NotoSansDevanagari_400Regular' },
 
-  // Patriotic banner
   bannerOuter: { marginHorizontal: 16, marginTop: 18 },
   bannerWrap: {
     height: 150, borderRadius: 16, overflow: 'hidden',
@@ -373,7 +420,6 @@ const s = StyleSheet.create({
   dot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)' },
   dotActive: { backgroundColor: COLORS.gold, width: 16 },
 
-  // Leaders
   leaderWrap: {
     marginHorizontal: 16, marginTop: 14, borderRadius: 18, overflow: 'hidden',
     elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
@@ -401,29 +447,27 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', marginVertical: 8,
   },
 
-  // Section
   section:   { paddingHorizontal: 16, paddingTop: 26 },
   secHead:   { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   secBar:    { width: 4, height: 24, backgroundColor: COLORS.saffron, borderRadius: 2, marginRight: 12 },
   secTitle:  { fontSize: 18, fontFamily: 'NotoSansDevanagari_700Bold', color: COLORS.navyPrimary },
 
-  // Grid
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   actionBtn: {
     width: CARD_W, borderRadius: 16, overflow: 'hidden',
     elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.18, shadowRadius: 8,
   },
-  actionGrad:  { padding: 18, minHeight: 118, justifyContent: 'flex-end', position: 'relative' },
+  actionGrad:  { padding: 16, minHeight: 130, justifyContent: 'flex-end', position: 'relative' },
   actionSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: 48, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 16 },
   actionIcon: {
-    width: 52, height: 52, borderRadius: 14,
+    width: 50, height: 50, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
-  actionLbl:  { color: '#fff', fontSize: 14, fontFamily: 'NotoSansDevanagari_700Bold', lineHeight: 20 },
+  actionLbl:  { color: '#fff', fontSize: 14, fontFamily: 'NotoSansDevanagari_700Bold', lineHeight: 19 },
+  actionSub:  { color: 'rgba(255,255,255,0.65)', fontSize: 10, marginTop: 2, letterSpacing: 0.3 },
 
-  // CTA
   cta: {
     borderRadius: 16, flexDirection: 'row', alignItems: 'center', padding: 18, gap: 14,
     elevation: 6, shadowColor: COLORS.green, shadowOffset: { width: 0, height: 4 },
@@ -435,5 +479,5 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   ctaMain: { color: '#fff', fontSize: 15, fontFamily: 'NotoSansDevanagari_700Bold' },
-  ctaSub:  { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontFamily: 'NotoSansDevanagari_400Regular', marginTop: 2 },
+  ctaSub:  { color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 2 },
 });
