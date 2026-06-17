@@ -12,7 +12,7 @@ import SchoolScreen  from '../screens/SchoolScreen';
 import StaffScreen   from '../screens/StaffScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HolidayScreen from '../screens/HolidayScreen';
-import EbooksVideosScreen from '../screens/EbooksVideosScreen'; import HouseScreen from '../screens/HouseScreen'; import TimetableScreen from '../screens/TimetableScreen';
+import EbooksVideosScreen from '../screens/EbooksVideosScreen'; import HouseScreen from '../screens/HouseScreen'; import TimetableScreen from '../screens/TimetableScreen'; import ExamScreen from '../screens/ExamScreen'; import AttendanceScreen from '../screens/AttendanceScreen'; import HomeworkScreen from '../screens/HomeworkScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -40,7 +40,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Staff"    component={StaffScreen} />
           <Stack.Screen name="Calendar" component={CalendarScreen} />
           <Stack.Screen name="Holiday"  component={HolidayScreen} />
-          <Stack.Screen name="EbooksVideos" component={EbooksVideosScreen} /><Stack.Screen name="House" component={HouseScreen} /><Stack.Screen name="Timetable" component={TimetableScreen} />
+          <Stack.Screen name="EbooksVideos" component={EbooksVideosScreen} /><Stack.Screen name="House" component={HouseScreen} /><Stack.Screen name="Timetable" component={TimetableScreen} /><Stack.Screen name="Exam" component={ExamScreen} /><Stack.Screen name="Attendance" component={AttendanceScreen} /><Stack.Screen name="Homework" component={HomeworkScreen} />
         </Stack.Navigator>
       </View>
       <HomeBar />
