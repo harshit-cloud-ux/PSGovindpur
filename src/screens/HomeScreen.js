@@ -31,7 +31,7 @@ const IMG = {
 };
 
 const QUICK_ACTIONS = [
-  { icon: 'time',               label: 'समय-सारणी',       sublabel: 'Timetable',       gradient: ['#1A3A6B','#2D5AA0'] },
+  { icon: 'time',               label: 'समय-सारणी',       sublabel: 'Timetable',       gradient: ['#1A3A6B','#2D5AA0'], screen: 'Timetable' },
   { icon: 'stats-chart',        label: 'परीक्षा',     sublabel: 'Exam',      gradient: ['#C2410C','#E07B39'] },
   { icon: 'people',             label: 'अटेंडेंस',        sublabel: 'Attendance',          gradient: ['#138808','#1A9C0A'] },
   { icon: 'pencil',             label: 'गृहकार्य',         sublabel: 'Homework',        gradient: ['#6D28D9','#8B5CF6'] },
