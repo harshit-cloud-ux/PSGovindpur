@@ -12,6 +12,7 @@ import SchoolScreen  from '../screens/SchoolScreen';
 import StaffScreen   from '../screens/StaffScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HolidayScreen from '../screens/HolidayScreen';
+import EbooksVideosScreen from '../screens/EbooksVideosScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Staff"    component={StaffScreen} />
           <Stack.Screen name="Calendar" component={CalendarScreen} />
           <Stack.Screen name="Holiday"  component={HolidayScreen} />
+          <Stack.Screen name="EbooksVideos" component={EbooksVideosScreen} />
         </Stack.Navigator>
       </View>
       <HomeBar />
