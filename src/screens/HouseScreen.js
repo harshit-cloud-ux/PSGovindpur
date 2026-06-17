@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, TextInput, ActivityIndicator, Alert, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,9 +8,6 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../theme/colors';
 
-// ── Leader photos ──────────────────────────────────────────────────
-// After you add photos to src/assets/images/ with these EXACT names,
-// replace `null` with the require(...) shown in the comment beside it.
 const PHOTOS = {
   azad:    require('../assets/images/azad.jpg'),
   bhagat:  require('../assets/images/bhagat.jpg'),
@@ -25,7 +22,6 @@ const HOUSES = [
   { key:'sukhdev', name:'सुखदेव हाउस',           leader:'सुखदेव थापर',      eng:'Sukhdev House',             initial:'सु', color:'#EAB308', dark:true  },
 ];
 
-// ── Reusable admin-editable text block (Firestore-backed) ──────────
 function EditableText({ docId, field, emptyHi, emptyEng, accent }) {
   const { isAdmin } = useAuth();
   const [val,     setVal]     = useState('');
@@ -33,6 +29,20 @@ function EditableText({ docId, field, emptyHi, emptyEng, accent }) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState('');
   const [saving,  setSaving]  = useState(false);
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!editing) { pulse.setValue(0); return; }
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue:1, duration:1200, useNativeDriver:false }),
+        Animated.timing(pulse, { toValue:0, duration:1200, useNativeDriver:false }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [editing]);
+  const borderColor = pulse.interpolate({ inputRange:[0,1], outputRange:['#E0D6C8', accent||'#1A3A6B'] });
+  const shadowOpacity = pulse.interpolate({ inputRange:[0,1], outputRange:[0.04, 0.32] });
 
   useEffect(() => {
     let active = true;
@@ -66,16 +76,21 @@ function EditableText({ docId, field, emptyHi, emptyEng, accent }) {
   );
 
   if (editing) return (
-    <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined}>
-      <TextInput
-        style={s.editArea}
-        value={draft}
-        onChangeText={setDraft}
-        placeholder="यहाँ टेक्स्ट लिखें या पेस्ट करें..."
-        placeholderTextColor={COLORS.inkLight}
-        multiline
-        textAlignVertical="top"
-      />
+    <View>
+      <Animated.View style={[s.editAreaWrap,{borderColor, shadowOpacity, shadowColor: accent||'#1A3A6B'}]}>
+        <TextInput
+          style={s.editArea}
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="यहाँ टेक्स्ट लिखें या पेस्ट करें..."
+          placeholderTextColor={COLORS.inkLight}
+          multiline
+          textAlignVertical="top"
+          keyboardType="default"
+          spellCheck={false}
+          rejectResponderTermination={false}
+        />
+      </Animated.View>
       <View style={s.editActions}>
         <TouchableOpacity onPress={()=>setEditing(false)} style={s.cancelBtn}>
           <Text style={s.cancelBtnTxt}>रद्द करें</Text>
@@ -84,7 +99,7 @@ function EditableText({ docId, field, emptyHi, emptyEng, accent }) {
           {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveBtnTxt}>सेव करें  ✓</Text>}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 
   return (
@@ -110,7 +125,6 @@ function EditableText({ docId, field, emptyHi, emptyEng, accent }) {
   );
 }
 
-// ── House detail (Layer 3) ─────────────────────────────────────────
 function HouseDetail({ house }) {
   const photo = PHOTOS[house.key];
   const txt = house.dark ? '#0F2347' : '#fff';
@@ -137,10 +151,32 @@ function HouseDetail({ house }) {
   );
 }
 
-// ── Main screen ────────────────────────────────────────────────────
 export default function HouseScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const [selHouse, setSelHouse] = useState(null);
+  const { isAdmin } = useAuth();
+  const [selHouse,      setSelHouse]      = useState(null);
+  const [activeDuty,    setActiveDuty]    = useState('');
+  const [dutyLoading,   setDutyLoading]   = useState(true);
+  const [markingSaving, setMarkingSaving] = useState(false);
+
+  useEffect(() => {
+    getDoc(doc(db, 'house', 'duties'))
+      .then(snap => {
+        if (snap.exists()) setActiveDuty(snap.data().activeDuty || '');
+        setDutyLoading(false);
+      })
+      .catch(() => setDutyLoading(false));
+  }, []);
+
+  const markDuty = async (key) => {
+    const next = activeDuty === key ? '' : key;
+    setMarkingSaving(true);
+    try {
+      await setDoc(doc(db, 'house', 'duties'), { activeDuty: next }, { merge: true });
+      setActiveDuty(next);
+    } catch(e) { Alert.alert('Error', 'सेव नहीं हुआ।'); }
+    setMarkingSaving(false);
+  };
 
   const current  = selHouse !== null ? HOUSES[selHouse] : null;
   const titleHi  = current ? current.name : 'हाउस';
@@ -171,7 +207,6 @@ export default function HouseScreen({ navigation }) {
 
       {selHouse === null ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom:40}}>
-          {/* Hero */}
           <View style={s.section}>
             <LinearGradient colors={['#0F2347','#1A3A6B','#1E4D8C']} style={s.hero}>
               <View style={s.heroIcon}><Ionicons name="trophy" size={28} color={COLORS.gold} /></View>
@@ -180,31 +215,38 @@ export default function HouseScreen({ navigation }) {
             </LinearGradient>
           </View>
 
-          {/* House cards */}
           <View style={s.section}>
             {HOUSES.map((h,i) => {
               const photo = PHOTOS[h.key];
               const txt = h.dark ? '#0F2347' : '#fff';
+              const onDuty = activeDuty === h.key;
               return (
                 <TouchableOpacity key={h.key} activeOpacity={0.88} onPress={()=>setSelHouse(i)}>
-                  <LinearGradient colors={[h.color, h.color]} style={s.houseCard}>
+                  <LinearGradient colors={[h.color, h.color]} style={[s.houseCard, onDuty && s.houseCardActive]}>
                     <View style={[s.photoFrame,{borderColor:h.dark?'rgba(15,35,71,0.25)':'rgba(255,255,255,0.6)'}]}>
                       {photo
                         ? <Image source={photo} style={s.photo} resizeMode="cover" />
                         : <View style={[s.initialBox,{backgroundColor:h.dark?'rgba(15,35,71,0.12)':'rgba(255,255,255,0.2)'}]}><Text style={[s.initialTxt,{color:txt}]}>{h.initial}</Text></View>}
                     </View>
                     <View style={{flex:1}}>
-                      <Text style={[s.houseName,{color:txt}]}>{h.name}</Text>
+                      <View style={{flexDirection:'row', alignItems:'center', gap:6, flexWrap:'wrap'}}>
+                        <Text style={[s.houseName,{color:txt}]}>{h.name}</Text>
+                        {onDuty && <Text style={s.dutyBadge}>⭐ ड्यूटी</Text>}
+                      </View>
                       <Text style={[s.houseLeader,{color:txt}]}>{h.leader}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={22} color={txt} />
+                    {isAdmin
+                      ? <TouchableOpacity onPress={()=>markDuty(h.key)} style={[s.markBtn,{borderColor:txt}]} disabled={markingSaving}>
+                          <Ionicons name={onDuty ? 'star' : 'star-outline'} size={22} color={txt} />
+                        </TouchableOpacity>
+                      : <Ionicons name="chevron-forward" size={22} color={txt} />
+                    }
                   </LinearGradient>
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          {/* Daily duties */}
           <View style={s.section}>
             <View style={s.secHead}><View style={s.secBar} /><Text style={s.secTitle}>आज की ड्यूटी</Text></View>
             <Text style={s.secTitleEng}>Today's Duties · रोज़ बदलती है</Text>
@@ -229,26 +271,25 @@ const s = StyleSheet.create({
   headerTitle:   { alignItems:'center', flex:1, paddingHorizontal:6 },
   headerHindi:   { color:'#fff', fontSize:18, fontFamily:'NotoSansDevanagari_700Bold' },
   headerEng:     { color:COLORS.saffronLight, fontSize:10, marginTop:1 },
-
   hero:          { borderRadius:18, padding:22, alignItems:'center', elevation:4, shadowColor:'#000', shadowOpacity:0.2, shadowRadius:8 },
   heroIcon:      { width:56, height:56, borderRadius:28, backgroundColor:'rgba(201,168,76,0.15)', borderWidth:1.5, borderColor:COLORS.gold, alignItems:'center', justifyContent:'center', marginBottom:12 },
   heroTitle:     { color:'#fff', fontSize:20, fontFamily:'NotoSansDevanagari_700Bold', textAlign:'center' },
   heroSub:       { color:'#C9DCF0', fontSize:12, marginTop:5, textAlign:'center', fontFamily:'NotoSansDevanagari_400Regular' },
-
   section:       { paddingHorizontal:16, paddingTop:16 },
   secHead:       { flexDirection:'row', alignItems:'center', marginBottom:4 },
   secBar:        { width:4, height:22, backgroundColor:COLORS.saffron, borderRadius:2, marginRight:10 },
   secTitle:      { fontSize:18, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyPrimary },
   secTitleEng:   { fontSize:11, color:COLORS.inkLight, marginLeft:14, marginBottom:14, letterSpacing:0.4 },
-
   houseCard:     { flexDirection:'row', alignItems:'center', gap:14, borderRadius:16, padding:16, marginBottom:12, elevation:3, shadowColor:'#000', shadowOpacity:0.18, shadowRadius:7 },
+  houseCardActive:{ borderWidth:2.5, borderColor:'rgba(255,255,255,0.85)' },
+  dutyBadge:     { fontSize:11, fontFamily:'NotoSansDevanagari_700Bold', color:'#fff', backgroundColor:'rgba(0,0,0,0.22)', borderRadius:8, paddingHorizontal:7, paddingVertical:2 },
+  markBtn:       { width:36, height:36, borderRadius:18, borderWidth:1.5, alignItems:'center', justifyContent:'center' },
   photoFrame:    { width:58, height:58, borderRadius:29, borderWidth:2, overflow:'hidden', alignItems:'center', justifyContent:'center' },
   photo:         { width:'100%', height:'100%' },
   initialBox:    { width:'100%', height:'100%', alignItems:'center', justifyContent:'center' },
   initialTxt:    { fontSize:22, fontFamily:'NotoSansDevanagari_700Bold' },
   houseName:     { fontSize:17, fontFamily:'NotoSansDevanagari_700Bold' },
   houseLeader:   { fontSize:12.5, marginTop:2, fontFamily:'NotoSansDevanagari_400Regular' },
-
   detailBanner:  { borderRadius:18, padding:24, alignItems:'center', elevation:4, shadowColor:'#000', shadowOpacity:0.2, shadowRadius:8 },
   detailPhotoFrame:{ width:96, height:96, borderRadius:48, borderWidth:3, overflow:'hidden', alignItems:'center', justifyContent:'center', marginBottom:12 },
   detailPhoto:   { width:'100%', height:'100%' },
@@ -256,20 +297,16 @@ const s = StyleSheet.create({
   detailInitialTxt:{ fontSize:38, fontFamily:'NotoSansDevanagari_700Bold' },
   detailName:    { fontSize:22, fontFamily:'NotoSansDevanagari_700Bold', textAlign:'center' },
   detailLeader:  { fontSize:14, marginTop:4, fontFamily:'NotoSansDevanagari_400Regular' },
-
   loaderBox:     { padding:24, alignItems:'center' },
-
   adminEditBtn:  { flexDirection:'row', alignItems:'center', gap:8, borderRadius:10, paddingVertical:11, paddingHorizontal:16, marginBottom:12, alignSelf:'flex-start' },
   adminEditTxt:  { color:'#fff', fontSize:13, fontFamily:'NotoSansDevanagari_700Bold' },
-
   contentCard:   { backgroundColor:'#fff', borderRadius:14, padding:16, elevation:2, shadowColor:'#000', shadowOpacity:0.06, shadowRadius:6 },
-  contentTxt:    { fontSize:15, lineHeight:25, color:COLORS.ink, fontFamily:'NotoSansDevanagari_400Regular' },
-
+  contentTxt:    { fontSize:17, lineHeight:28, color:COLORS.ink, fontFamily:'NotoSansDevanagari_700Bold' },
   emptyCard:     { flexDirection:'row', alignItems:'center', gap:10, backgroundColor:'#F5F0E8', borderRadius:12, padding:16 },
   emptyTxt:      { fontSize:13, color:COLORS.inkLight, fontFamily:'NotoSansDevanagari_400Regular', fontStyle:'italic' },
   emptyTxtEng:   { fontSize:11, color:COLORS.inkLight, marginTop:2 },
-
-  editArea:      { backgroundColor:'#fff', borderRadius:12, borderWidth:1, borderColor:'#E0D6C8', padding:14, minHeight:170, fontSize:15, lineHeight:24, color:COLORS.ink, fontFamily:'NotoSansDevanagari_400Regular' },
+  editAreaWrap:  { borderRadius:12, borderWidth:2, shadowRadius:10, shadowOffset:{width:0,height:0}, elevation:6, marginBottom:0 },
+  editArea:      { backgroundColor:'#fff', borderRadius:10, padding:14, minHeight:170, fontSize:15, lineHeight:24, color:COLORS.ink, fontFamily:'NotoSansDevanagari_400Regular' },
   editActions:   { flexDirection:'row', gap:12, marginTop:12 },
   cancelBtn:     { flex:1, backgroundColor:'#F5F0E8', borderRadius:12, padding:14, alignItems:'center' },
   cancelBtnTxt:  { fontSize:14, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.inkSoft },
