@@ -23,6 +23,10 @@ const IMG = {
     require('../assets/images/patriotic1.jpg'),
     require('../assets/images/patriotic2.jpg'),
     require('../assets/images/patriotic3.jpg'),
+    require('../assets/images/patriotic4.jpg'),
+    require('../assets/images/patriotic5.jpg'),
+    require('../assets/images/patriotic6.jpg'),
+    require('../assets/images/patriotic7.jpg'),
   ],
 };
 
@@ -35,8 +39,9 @@ const QUICK_ACTIONS = [
   { icon: 'trophy',             label: 'हाउस',             sublabel: 'House',           gradient: ['#B45309','#F59E0B'] },
   { icon: 'videocam',           label: 'वीडियो',           sublabel: 'Video',           gradient: ['#0369A1','#0EA5E9'] },
   { icon: 'document-text',      label: 'ई-पुस्तकें',      sublabel: 'E-Books',         gradient: ['#065F46','#059669'] },
-  { icon: 'calendar',           label: 'वार्षिक कैलेंडर',  sublabel: 'Annual Calendar', gradient: ['#7C3AED','#A855F7'] },
-  { icon: 'information-circle', label: 'अबाउट',            sublabel: 'About',           gradient: ['#0F766E','#14B8A6'] },
+  { icon: 'calendar', label: 'वार्षिक कैलेंडर', sublabel: 'Annual Calendar', gradient: ['#7C3AED','#A855F7'], screen: 'Calendar' },
+  { icon: 'flag', label: 'अवकाश तालिका', sublabel: 'Holiday List', gradient: ['#9D174D','#DB2777'], screen: 'Holiday' },
+{ icon: 'information-circle', label: 'अबाउट',            sublabel: 'About',           gradient: ['#0F766E','#14B8A6'], screen: 'About' },
 ];
 
 const TICKER = [
@@ -172,13 +177,13 @@ function PatrioticBanner() {
   );
 }
 
-function ActionCard({ action, delay }) {
+function ActionCard({ action, delay, onPress }) {
   const scale = useRef(new Animated.Value(1)).current;
   const pressIn  = () => Animated.spring(scale, { toValue: 0.94, useNativeDriver: true }).start();
   const pressOut = () => Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
   return (
     <FadeIn delay={delay}>
-      <Pressable onPressIn={pressIn} onPressOut={pressOut}>
+      <Pressable onPressIn={pressIn} onPressOut={pressOut} onPress={onPress}>
         <Animated.View style={[s.actionBtn, { transform: [{ scale }] }]}>
           <LinearGradient
             colors={action.gradient}
@@ -198,7 +203,7 @@ function ActionCard({ action, delay }) {
   );
 }
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { isAdmin } = useAuth();
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -245,11 +250,11 @@ export default function HomeScreen() {
           <FadeIn delay={250}>
             
             <Text style={s.heroName}>प्राथमिक विद्यालय गोविंदपुर</Text>
-            <Text style={s.heroSub}>P.S. Govindpur  ·  उत्तर प्रदेश</Text>
+            <Text style={s.heroSub}>UDISE कोड: 09141101809</Text>
           </FadeIn>
 
           <FadeIn delay={430} style={s.pills}>
-            {[['412','छात्र','Students'],['14','शिक्षक','Teachers'],['94%','उपस्थिति','Attendance']].map(([n,l,e]) => (
+            {[['166','छात्र','Students'],['3','शिक्षक','Teachers'],['94%','उपस्थिति','Attendance']].map(([n,l,e]) => (
               <View key={l} style={s.pill}>
                 <Text style={s.pillNum}>{n}</Text>
                 <Text style={s.pillLbl}>{l}</Text>
@@ -308,7 +313,12 @@ export default function HomeScreen() {
           </View>
           <View style={s.grid}>
             {QUICK_ACTIONS.map((a, i) => (
-              <ActionCard key={i} action={a} delay={80 + i * 70} />
+              <ActionCard
+                key={i}
+                action={a}
+                delay={80 + i * 70}
+                onPress={a.screen ? () => navigation.navigate(a.screen) : undefined}
+              />
             ))}
           </View>
         </View>
