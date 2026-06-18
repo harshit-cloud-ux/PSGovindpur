@@ -325,20 +325,22 @@ export default function HomeScreen({ navigation }) {
         {/* Registration CTA — admin only */}
         {isAdmin && (
           <FadeIn delay={760} style={s.section}>
-            <LinearGradient
-              colors={['#0A6B0A','#138808','#1AA81A']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={s.cta}
-            >
-              <View style={s.ctaIcon}>
-                <Ionicons name="person-add" size={24} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.ctaMain}>नए छात्र का पंजीकरण करें</Text>
-                <Text style={s.ctaSub}>New Student Registration  ·  Session 2026-27</Text>
-              </View>
-              <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.85)" />
-            </LinearGradient>
+            <TouchableOpacity activeOpacity={0.88} onPress={() => navigation.navigate('Registration')}>
+              <LinearGradient
+                colors={['#0A6B0A','#138808','#1AA81A']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={s.cta}
+              >
+                <View style={s.ctaIcon}>
+                  <Ionicons name="person-add" size={24} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.ctaMain}>नए छात्र का पंजीकरण करें</Text>
+                  <Text style={s.ctaSub}>New Student Registration  ·  Session 2026-27</Text>
+                </View>
+                <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.85)" />
+              </LinearGradient>
+            </TouchableOpacity>
           </FadeIn>
         )}
 
