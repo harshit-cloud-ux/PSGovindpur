@@ -325,7 +325,7 @@ export default function HomeScreen({ navigation }) {
         {/* Registration CTA — admin only */}
         {isAdmin && (
           <FadeIn delay={760} style={s.section}>
-            <TouchableOpacity activeOpacity={0.88} onPress={() => navigation.navigate('Registration')}>
+            <TouchableOpacity activeOpacity={0.88} onPress={() => navigation.navigate('RegistrationHome')}>
               <LinearGradient
                 colors={['#0A6B0A','#138808','#1AA81A']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
