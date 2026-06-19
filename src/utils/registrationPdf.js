@@ -79,7 +79,7 @@ table.sib td{height:18px}
   <img class="corner" src="${NIPUN_BHARAT}">
   <div class="center">
     <img src="${SCHOOL_LOGO}">
-    <div class="school-name">प्राथमिक विद्यालय गोविंदपुर</div>
+    <div class="school-name">प्राथमिक विद्यालय गोविंदपुर, नगर क्षेत्र मथुरा</div>
   </div>
   ${upLogo}
 </div>
