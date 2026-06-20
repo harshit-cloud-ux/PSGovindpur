@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "discover": "node seedGallery.mjs --discover",
+    "init": "node seedGallery.mjs --init",
     "dry": "node seedGallery.mjs --dry",
     "seed": "node seedGallery.mjs"
   },
