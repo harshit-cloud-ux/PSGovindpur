@@ -17,7 +17,7 @@
  * can seed in batches as you finish uploading each album.
  */
 
-module.exports = [
+export default [
   { order: 1,  title: 'प्रातः कालीन प्रार्थना सत्र',                         folder: '', photosAlbumUrl: '', videos: [] },
   { order: 2,  title: 'सांयकालीन बाल सभा',                                  folder: '', photosAlbumUrl: '', videos: [] },
   { order: 3,  title: 'प्रेरणादाई मध्यान भोजन सत्र',                          folder: '', photosAlbumUrl: '', videos: [] },
