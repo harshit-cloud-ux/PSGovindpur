@@ -1,5 +1,5 @@
 import { AuthProvider } from './src/context/AuthContext';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation/rootNavigation';
 import { COLORS } from './src/theme/colors';
+import AnimatedSplash from './src/components/AnimatedSplash';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,7 +25,10 @@ export default function App() {
     TiroDevanagariHindi_400Regular,
     TiroDevanagariHindi_400Regular_Italic,
   });
+  const [splashDone, setSplashDone] = useState(false);
 
+  // Hide the native splash as soon as JS can paint, so the native screen hands
+  // off seamlessly to the animated photo splash (both share the cream background).
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) await SplashScreen.hideAsync();
   }, [fontsLoaded]);
@@ -36,9 +40,13 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
         <SafeAreaProvider>
           <StatusBar backgroundColor={COLORS.navyPrimary} barStyle="light-content" />
-          <NavigationContainer ref={navigationRef}>
-            <AppNavigator />
-          </NavigationContainer>
+          {splashDone ? (
+            <NavigationContainer ref={navigationRef}>
+              <AppNavigator />
+            </NavigationContainer>
+          ) : (
+            <AnimatedSplash onFinish={() => setSplashDone(true)} />
+          )}
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </AuthProvider>

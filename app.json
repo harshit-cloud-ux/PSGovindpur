@@ -12,10 +12,8 @@
     "android": {
       "package": "in.psgovindpur.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0F2347"
       }
     },
     "web": {
@@ -23,7 +21,16 @@
     },
     "plugins": [
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-logo.png",
+          "imageWidth": 300,
+          "resizeMode": "contain",
+          "backgroundColor": "#EFE9D9"
+        }
+      ]
     ],
     "extra": {
       "eas": {
