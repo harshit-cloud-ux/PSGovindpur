@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, Dimensions, Linking, Modal, StatusBar, Alert,
+  Image, Dimensions, Linking, Modal, StatusBar, Alert, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import { uploadToCloudinary, deleteFromCloudinary, CLOUDINARY } from '../config/cloudinary';
 import { COLORS } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
@@ -79,61 +84,165 @@ const v = StyleSheet.create({
   arrowRight: { right: 12 },
 });
 
-// ── Video card ───────────────────────────────────────────────────────
+// ── YouTube helpers ──────────────────────────────────────────────────
+// Pull the 11-char video id out of any common YouTube URL shape.
+function youtubeId(url = '') {
+  const m = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([A-Za-z0-9_-]{11})/
+  );
+  return m ? m[1] : null;
+}
+const ytThumb = id => `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+
+// ── Video card (real YouTube thumbnail + play overlay) ───────────────
 function VideoCard({ video }) {
+  const [thumbErr, setThumbErr] = useState(false);
+  const id = youtubeId(video.url);
+
   const open = () => {
     Linking.openURL(video.url).catch(() =>
       Alert.alert('त्रुटि', 'वीडियो नहीं खुल सका।')
     );
   };
+
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={open} style={vc.card}>
-      <View style={vc.iconWrap}>
-        <Ionicons name="logo-youtube" size={24} color="#fff" />
+    <TouchableOpacity activeOpacity={0.9} onPress={open} style={vc.card}>
+      <View style={vc.thumbWrap}>
+        {id && !thumbErr ? (
+          <Image
+            source={{ uri: ytThumb(id) }}
+            style={vc.thumb}
+            resizeMode="cover"
+            onError={() => setThumbErr(true)}
+          />
+        ) : (
+          <LinearGradient colors={['#1A3A6B', '#2D5AA0']} style={vc.thumb} />
+        )}
+        {/* dark gradient + play button */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.55)']}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={vc.playBtn}>
+          <Ionicons name="play" size={24} color="#fff" style={{ marginLeft: 2 }} />
+        </View>
+        {/* title pinned bottom-left over the thumbnail */}
+        {!!video.title && (
+          <Text style={vc.thumbTitle} numberOfLines={2}>{video.title}</Text>
+        )}
+        {/* YouTube tag top-right */}
+        <View style={vc.ytTag}>
+          <Ionicons name="logo-youtube" size={12} color="#fff" />
+          <Text style={vc.ytTagTxt}>YouTube</Text>
+        </View>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={vc.title} numberOfLines={2}>{video.title || 'वीडियो देखें'}</Text>
-        <Text style={vc.sub}>YouTube पर देखें</Text>
-      </View>
-      <Ionicons name="open-outline" size={18} color={COLORS.inkLight} />
     </TouchableOpacity>
   );
 }
 
 const vc = StyleSheet.create({
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10,
-    elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6,
+    borderRadius: 14, marginBottom: 12, overflow: 'hidden',
+    backgroundColor: '#000',
+    elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8,
   },
-  iconWrap: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: '#FF0000',
+  thumbWrap: { width: '100%', aspectRatio: 16 / 9, justifyContent: 'center', alignItems: 'center' },
+  thumb:     { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  playBtn: {
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: 'rgba(255,0,0,0.92)',
     alignItems: 'center', justifyContent: 'center',
+    elevation: 4, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6,
   },
-  title:  { fontSize: 13, fontFamily: 'NotoSansDevanagari_700Bold', color: COLORS.navyDark, lineHeight: 18 },
-  sub:    { fontSize: 11, color: COLORS.inkLight, marginTop: 2 },
+  thumbTitle: {
+    position: 'absolute', bottom: 8, left: 10, right: 10,
+    color: '#fff', fontSize: 12, fontFamily: 'NotoSansDevanagari_700Bold',
+    lineHeight: 16,
+    textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
+  },
+  ytTag: {
+    position: 'absolute', top: 8, right: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6,
+  },
+  ytTagTxt: { color: '#fff', fontSize: 9, fontWeight: '700' },
 });
 
 // ── Main screen ──────────────────────────────────────────────────────
 export default function GalleryEventScreen({ route, navigation }) {
   const { event } = route.params;
+  const { isAdmin } = useAuth();
   const insets = useSafeAreaInsets();
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerStart,   setViewerStart]   = useState(0);
 
-  const photos = event.photos  || [];
+  const [photos, setPhotos] = useState(event.photos || []);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
   const videos = event.videos  || [];
   const albumUrl = event.photosAlbumUrl || null;
+  const eventRef = doc(db, 'galleryEvents', event.id);
+  const uploadFolder = `gallery/${event.folder || event.id}`;
 
   const openPhoto = (index) => {
     setViewerStart(index);
     setViewerVisible(true);
   };
 
+  // ── Admin: add a photo ─────────────────────────────────────────────
+  const addPhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('अनुमति आवश्यक', 'फ़ोटो जोड़ने के लिए गैलरी की अनुमति दें।');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+    if (result.canceled) return;
+
+    setBusy(true);
+    try {
+      const url = await uploadToCloudinary(result.assets[0].uri, uploadFolder);
+      await updateDoc(eventRef, { photos: arrayUnion(url), updatedAt: Date.now() });
+      setPhotos((p) => [...p, url]);
+    } catch (e) {
+      Alert.alert('त्रुटि', 'फ़ोटो अपलोड नहीं हुई। पुनः प्रयास करें।');
+    }
+    setBusy(false);
+  };
+
+  // ── Admin: delete a photo (Cloudinary + Firestore) ─────────────────
+  const deletePhoto = (url) => {
+    Alert.alert('फ़ोटो हटाएँ?', 'यह फ़ोटो स्थायी रूप से हट जाएगी।', [
+      { text: 'रद्द करें', style: 'cancel' },
+      {
+        text: 'हटाएँ',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          try {
+            if (CLOUDINARY.deleteEndpoint) {
+              await deleteFromCloudinary(url);   // removes from Cloudinary too
+            }
+            await updateDoc(eventRef, { photos: arrayRemove(url), updatedAt: Date.now() });
+            setPhotos((p) => p.filter((u) => u !== url));
+          } catch (e) {
+            Alert.alert('त्रुटि', 'फ़ोटो हटाई नहीं जा सकी। पुनः प्रयास करें।');
+          }
+          setBusy(false);
+        },
+      },
+    ]);
+  };
+
   // Combined data for FlatList: photos grid + videos section + album button
   // We render photos in a 3-col grid using a flat list with item types
   const PHOTO_ITEMS = photos.map((url, i) => ({ type: 'photo', url, index: i }));
+  if (isAdmin && editing) PHOTO_ITEMS.push({ type: 'add', index: -1 });
 
   const ListHeader = () => (
     <View style={s.listHeader}>
@@ -194,6 +303,15 @@ export default function GalleryEventScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={s.headerTitle} numberOfLines={2}>{event.title}</Text>
+        {isAdmin && (
+          <TouchableOpacity
+            style={s.adminToggle}
+            onPress={() => setEditing(e => !e)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name={editing ? 'checkmark' : 'create-outline'} size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
       </LinearGradient>
 
       {/* Tricolor strip */}
@@ -204,7 +322,7 @@ export default function GalleryEventScreen({ route, navigation }) {
       </View>
 
       {/* Photo grid */}
-      {photos.length === 0 && videos.length === 0 ? (
+      {photos.length === 0 && videos.length === 0 && !isAdmin ? (
         <View style={s.empty}>
           <Ionicons name="images-outline" size={56} color={COLORS.border} />
           <Text style={s.emptyText}>अभी कोई सामग्री नहीं है</Text>
@@ -219,20 +337,46 @@ export default function GalleryEventScreen({ route, navigation }) {
           ListHeaderComponent={ListHeader}
           ListFooterComponent={ListFooter}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => openPhoto(item.index)}
-              style={s.photoThumb}
-            >
-              <Image
-                source={{ uri: THUMB(item.url) }}
-                style={s.photoImg}
-                resizeMode="cover"
-              />
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => {
+            if (item.type === 'add') {
+              return (
+                <TouchableOpacity activeOpacity={0.8} onPress={addPhoto} style={[s.photoThumb, s.addTile]}>
+                  <Ionicons name="add" size={30} color={COLORS.navyPrimary} />
+                  <Text style={s.addTileTxt}>फ़ोटो जोड़ें</Text>
+                </TouchableOpacity>
+              );
+            }
+            return (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => (editing ? null : openPhoto(item.index))}
+                style={s.photoThumb}
+              >
+                <Image
+                  source={{ uri: THUMB(item.url) }}
+                  style={s.photoImg}
+                  resizeMode="cover"
+                />
+                {isAdmin && editing && (
+                  <TouchableOpacity
+                    style={s.delBadge}
+                    onPress={() => deletePhoto(item.url)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={14} color="#fff" />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            );
+          }}
         />
+      )}
+
+      {/* Busy overlay */}
+      {busy && (
+        <View style={s.busyOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+        </View>
       )}
 
       {/* Full-screen viewer */}
@@ -283,6 +427,31 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.border,
   },
   photoImg:     { width: '100%', height: '100%' },
+
+  adminToggle: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  delBadge: {
+    position: 'absolute', top: 4, right: 4,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: 'rgba(194,65,12,0.95)',
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 3, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 3,
+  },
+  addTile: {
+    alignItems: 'center', justifyContent: 'center', gap: 4,
+    backgroundColor: '#EAF0F8',
+    borderWidth: 1.5, borderColor: COLORS.navyPrimary, borderStyle: 'dashed',
+  },
+  addTileTxt: { fontSize: 10, color: COLORS.navyPrimary, fontFamily: 'NotoSansDevanagari_700Bold' },
+  busyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(8,20,42,0.55)',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   footer:        { paddingHorizontal: 16, paddingTop: 16 },
   albumBtn: {

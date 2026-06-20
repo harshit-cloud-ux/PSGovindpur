@@ -1,0 +1,11 @@
+name = "ps-govindpur-delete"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+CLOUDINARY_CLOUD_NAME = "dgjxqjvbv"
+
+# Secrets are NOT stored here. Set them with:
+#   wrangler secret put CLOUDINARY_API_KEY
+#   wrangler secret put CLOUDINARY_API_SECRET
+#   wrangler secret put ADMIN_TOKEN

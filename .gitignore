@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# seed tooling secrets
+scripts/.env
+scripts/node_modules/
