@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, Dimensions, Linking, Modal, StatusBar, Alert, ActivityIndicator,
+  Image, Dimensions, Linking, Modal, StatusBar, Alert, ActivityIndicator, TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -178,17 +178,57 @@ export default function GalleryEventScreen({ route, navigation }) {
   const [viewerStart,   setViewerStart]   = useState(0);
 
   const [photos, setPhotos] = useState(event.photos || []);
+  const [videos, setVideos] = useState(event.videos || []);
+  const [albumUrl, setAlbumUrl] = useState(event.photosAlbumUrl || '');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const videos = event.videos  || [];
-  const albumUrl = event.photosAlbumUrl || null;
+  // Draft buffers for the link editor (admin)
+  const [draftVideos, setDraftVideos] = useState((event.videos || []).map(v => ({ ...v })));
+  const [draftAlbum,  setDraftAlbum]  = useState(event.photosAlbumUrl || '');
+  const [savingLinks, setSavingLinks] = useState(false);
+
   const eventRef = doc(db, 'galleryEvents', event.id);
   const uploadFolder = `gallery/${event.folder || event.id}`;
+
+  // Sync drafts from the latest saved values whenever edit mode is opened.
+  const toggleEdit = () => {
+    setEditing((on) => {
+      const next = !on;
+      if (next) {
+        setDraftVideos(videos.map(v => ({ ...v })));
+        setDraftAlbum(albumUrl);
+      }
+      return next;
+    });
+  };
 
   const openPhoto = (index) => {
     setViewerStart(index);
     setViewerVisible(true);
+  };
+
+  // ── Admin: link editor helpers ─────────────────────────────────────
+  const addVideoRow    = () => setDraftVideos((v) => [...v, { title: '', url: '' }]);
+  const removeVideoRow = (i) => setDraftVideos((v) => v.filter((_, idx) => idx !== i));
+  const setVidField    = (i, field, val) =>
+    setDraftVideos((v) => v.map((x, idx) => (idx === i ? { ...x, [field]: val } : x)));
+
+  const saveLinks = async () => {
+    setSavingLinks(true);
+    try {
+      const cleanVideos = draftVideos
+        .filter((v) => v.url && v.url.trim() !== '')
+        .map((v) => ({ title: (v.title || '').trim(), url: v.url.trim() }));
+      const album = draftAlbum.trim();
+      await updateDoc(eventRef, { videos: cleanVideos, photosAlbumUrl: album, updatedAt: Date.now() });
+      setVideos(cleanVideos);
+      setAlbumUrl(album);
+      Alert.alert('सेव हो गया', 'लिंक अपडेट हो गए।');
+    } catch (e) {
+      Alert.alert('त्रुटि', 'लिंक सेव नहीं हुए। पुनः प्रयास करें।');
+    }
+    setSavingLinks(false);
   };
 
   // ── Admin: add a photo ─────────────────────────────────────────────
@@ -244,7 +284,7 @@ export default function GalleryEventScreen({ route, navigation }) {
   const PHOTO_ITEMS = photos.map((url, i) => ({ type: 'photo', url, index: i }));
   if (isAdmin && editing) PHOTO_ITEMS.push({ type: 'add', index: -1 });
 
-  const ListHeader = () => (
+  const listHeader = (
     <View style={s.listHeader}>
       {/* Section: Photos */}
       {photos.length > 0 && (
@@ -257,10 +297,74 @@ export default function GalleryEventScreen({ route, navigation }) {
     </View>
   );
 
-  const ListFooter = () => (
+  // Edit-mode footer: editor for Google Photos album + YouTube links.
+  const editorFooter = (
     <View style={s.footer}>
-      {/* View all photos button */}
-      {albumUrl && (
+      {/* Google Photos album link */}
+      <View style={s.sectionHead}>
+        <View style={s.secBar} />
+        <Text style={s.sectionTitle}>सभी फ़ोटो एल्बम</Text>
+      </View>
+      <Text style={s.fieldHint}>Google Photos शेयर लिंक (वैकल्पिक)</Text>
+      <TextInput
+        style={s.input}
+        value={draftAlbum}
+        onChangeText={setDraftAlbum}
+        placeholder="https://photos.app.goo.gl/..."
+        placeholderTextColor={COLORS.inkLight}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+
+      {/* YouTube videos */}
+      <View style={[s.sectionHead, { marginTop: 22 }]}>
+        <View style={s.secBar} />
+        <Text style={s.sectionTitle}>वीडियो लिंक</Text>
+      </View>
+      {draftVideos.map((v, i) => (
+        <View key={i} style={s.vidEditRow}>
+          <View style={{ flex: 1 }}>
+            <TextInput
+              style={[s.input, { marginBottom: 6 }]}
+              value={v.title}
+              onChangeText={(t) => setVidField(i, 'title', t)}
+              placeholder={`वीडियो ${i + 1} का नाम`}
+              placeholderTextColor={COLORS.inkLight}
+            />
+            <TextInput
+              style={s.input}
+              value={v.url}
+              onChangeText={(t) => setVidField(i, 'url', t)}
+              placeholder="YouTube URL"
+              placeholderTextColor={COLORS.inkLight}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          <TouchableOpacity onPress={() => removeVideoRow(i)} style={s.vidRemove}>
+            <Ionicons name="trash-outline" size={18} color="#C2410C" />
+          </TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity onPress={addVideoRow} style={s.addLinkBtn}>
+        <Ionicons name="add-circle-outline" size={18} color={COLORS.navyPrimary} />
+        <Text style={s.addLinkTxt}>वीडियो जोड़ें</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={saveLinks} style={s.saveLinksBtn} disabled={savingLinks}>
+        {savingLinks
+          ? <ActivityIndicator color="#fff" size="small" />
+          : <Text style={s.saveLinksTxt}>लिंक सेव करें  ✓</Text>}
+      </TouchableOpacity>
+
+      <View style={{ height: 28 }} />
+    </View>
+  );
+
+  // View-mode footer: album button + video cards.
+  const viewFooter = (
+    <View style={s.footer}>
+      {!!albumUrl && (
         <TouchableOpacity
           style={s.albumBtn}
           activeOpacity={0.85}
@@ -272,7 +376,6 @@ export default function GalleryEventScreen({ route, navigation }) {
         </TouchableOpacity>
       )}
 
-      {/* Videos section */}
       {videos.length > 0 && (
         <View style={s.videosSection}>
           <View style={s.sectionHead}>
@@ -287,6 +390,8 @@ export default function GalleryEventScreen({ route, navigation }) {
       <View style={{ height: 24 }} />
     </View>
   );
+
+  const listFooter = isAdmin && editing ? editorFooter : viewFooter;
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -306,7 +411,7 @@ export default function GalleryEventScreen({ route, navigation }) {
         {isAdmin && (
           <TouchableOpacity
             style={s.adminToggle}
-            onPress={() => setEditing(e => !e)}
+            onPress={toggleEdit}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name={editing ? 'checkmark' : 'create-outline'} size={20} color="#fff" />
@@ -334,8 +439,10 @@ export default function GalleryEventScreen({ route, navigation }) {
           numColumns={3}
           contentContainerStyle={s.photoList}
           columnWrapperStyle={s.photoRow}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={ListFooter}
+          ListHeaderComponent={listHeader}
+          ListFooterComponent={listFooter}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             if (item.type === 'add') {
@@ -427,6 +534,33 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.border,
   },
   photoImg:     { width: '100%', height: '100%' },
+
+  fieldHint: { fontSize: 12, color: COLORS.inkLight, marginBottom: 6, fontFamily: 'NotoSansDevanagari_400Regular' },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    fontSize: 13, color: COLORS.navyDark,
+  },
+  vidEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  vidRemove: {
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: '#FEE9E1',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  addLinkBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: COLORS.navyPrimary, borderStyle: 'dashed',
+    borderRadius: 10, paddingVertical: 11, marginTop: 2,
+  },
+  addLinkTxt: { color: COLORS.navyPrimary, fontSize: 13, fontFamily: 'NotoSansDevanagari_700Bold' },
+  saveLinksBtn: {
+    backgroundColor: COLORS.navyPrimary,
+    borderRadius: 12, paddingVertical: 14, alignItems: 'center',
+    marginTop: 18,
+    elevation: 3, shadowColor: COLORS.navyDark, shadowOpacity: 0.2, shadowRadius: 6,
+  },
+  saveLinksTxt: { color: '#fff', fontSize: 14, fontFamily: 'NotoSansDevanagari_700Bold' },
 
   adminToggle: {
     width: 38, height: 38, borderRadius: 19,
