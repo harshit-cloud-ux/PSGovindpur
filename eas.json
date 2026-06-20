@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_DELETE_ENDPOINT": "https://ps-govindpur-delete.psgovindpur2026.workers.dev",
+        "EXPO_PUBLIC_ADMIN_TOKEN": "51a9ef85bf703a13b056d137d9e8bb706919c9219bb8eef2"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_DELETE_ENDPOINT": "https://ps-govindpur-delete.psgovindpur2026.workers.dev",
+        "EXPO_PUBLIC_ADMIN_TOKEN": "51a9ef85bf703a13b056d137d9e8bb706919c9219bb8eef2"
+      }
+    }
+  }
+}

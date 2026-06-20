@@ -10,7 +10,7 @@
       "supportsTablet": true
     },
     "android": {
-     "package": "in.psgovindpur.app",
+      "package": "in.psgovindpur.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,6 +24,11 @@
     "plugins": [
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "24b8f228-99d1-4010-b3ac-55f51e05b3b5"
+      }
+    }
   }
 }
