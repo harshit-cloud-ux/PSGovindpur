@@ -2,13 +2,11 @@ export const CLOUDINARY = {
   cloudName:    'dgjxqjvbv',
   uploadPreset: 'ps_govindpur',
   baseUrl:      'https://api.cloudinary.com/v1_1/dgjxqjvbv/image/upload',
-  // Your server endpoint that holds the api_secret and performs the signed delete.
-  // The secret NEVER lives in this app. Leave '' until you deploy the worker.
-  deleteEndpoint: '',   // e.g. 'https://ps-govindpur-delete.<you>.workers.dev'
-  // Shared token the worker checks (X-Admin-Token). A speed bump, not a vault —
-  // anything in the app bundle is extractable. Best practice: load from an Expo
-  // env/extra at build time rather than committing the real value here.
-  adminToken: '',
+  // Delete endpoint + admin token come from env vars (a gitignored .env.local
+  // locally, EAS env vars for builds) so they never land in this PUBLIC repo.
+  // Set EXPO_PUBLIC_DELETE_ENDPOINT and EXPO_PUBLIC_ADMIN_TOKEN.
+  deleteEndpoint: process.env.EXPO_PUBLIC_DELETE_ENDPOINT || '',
+  adminToken:     process.env.EXPO_PUBLIC_ADMIN_TOKEN || '',
 };
 
 // Derive the Cloudinary public_id from a stored secure_url.
