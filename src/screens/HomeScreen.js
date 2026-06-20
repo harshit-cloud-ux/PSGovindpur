@@ -35,7 +35,7 @@ const QUICK_ACTIONS = [
   { icon: 'stats-chart',        label: 'परीक्षा',     sublabel: 'Exam',      gradient: ['#C2410C','#E07B39'], screen: 'Exam' },
   { icon: 'people',             label: 'अटेंडेंस',        sublabel: 'Attendance',          gradient: ['#138808','#1A9C0A'], screen: 'Attendance' },
   { icon: 'pencil',             label: 'गृहकार्य',         sublabel: 'Homework',        gradient: ['#6D28D9','#8B5CF6'], screen: 'Homework' },
-  { icon: 'images',             label: 'गैलरी',            sublabel: 'Gallery',         gradient: ['#BE185D','#EC4899'] },
+  { icon: 'images', label: 'गैलरी', sublabel: 'Gallery', gradient: ['#BE185D','#EC4899'], screen: 'Gallery' },
   { icon: 'trophy',             label: 'हाउस',             sublabel: 'House',           gradient: ['#B45309','#F59E0B'], screen: 'House' },
   { icon: 'library', label: 'ई-पुस्तकें व वीडियो', sublabel: 'E-Books & Videos', gradient: ['#065F46','#0EA5E9'], screen: 'EbooksVideos' },
   { icon: 'calendar', label: 'वार्षिक कैलेंडर', sublabel: 'Annual Calendar', gradient: ['#7C3AED','#A855F7'], screen: 'Calendar' },
