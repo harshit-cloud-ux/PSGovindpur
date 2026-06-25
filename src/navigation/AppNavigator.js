@@ -12,7 +12,7 @@ import SchoolScreen  from '../screens/SchoolScreen';
 import StaffScreen   from '../screens/StaffScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HolidayScreen from '../screens/HolidayScreen';
-import EbooksVideosScreen from '../screens/EbooksVideosScreen'; import HouseScreen from '../screens/HouseScreen'; import TimetableScreen from '../screens/TimetableScreen'; import ExamScreen from '../screens/ExamScreen'; import AttendanceScreen from '../screens/AttendanceScreen'; import HomeworkScreen from '../screens/HomeworkScreen'; import RegistrationScreen from '../screens/RegistrationScreen'; import RegistrationHomeScreen from '../screens/RegistrationHomeScreen'; import RegistrationListScreen from '../screens/RegistrationListScreen';
+import EbooksVideosScreen from '../screens/EbooksVideosScreen'; import HouseScreen from '../screens/HouseScreen'; import TimetableScreen from '../screens/TimetableScreen'; import ExamScreen from '../screens/ExamScreen'; import AttendanceScreen from '../screens/AttendanceScreen'; import HomeworkScreen from '../screens/HomeworkScreen'; import RegistrationScreen from '../screens/RegistrationScreen'; import RegistrationHomeScreen from '../screens/RegistrationHomeScreen'; import RegistrationListScreen from '../screens/RegistrationListScreen';import PrayerActivitiesScreen from '../screens/PrayerActivitiesScreen';import CleanlinessHeroScreen  from '../screens/CleanlinessHeroScreen';
 import GalleryScreen      from '../screens/GalleryScreen';
 import GalleryEventScreen from '../screens/GalleryEventScreen';
 
@@ -45,6 +45,8 @@ export default function AppNavigator() {
           <Stack.Screen name="EbooksVideos" component={EbooksVideosScreen} /><Stack.Screen name="House" component={HouseScreen} /><Stack.Screen name="Timetable" component={TimetableScreen} /><Stack.Screen name="Exam" component={ExamScreen} /><Stack.Screen name="Attendance" component={AttendanceScreen} /><Stack.Screen name="Homework" component={HomeworkScreen} /><Stack.Screen name="RegistrationHome" component={RegistrationHomeScreen} /><Stack.Screen name="RegistrationList" component={RegistrationListScreen} /><Stack.Screen name="Registration" component={RegistrationScreen} />
           <Stack.Screen name="Gallery"      component={GalleryScreen} />
           <Stack.Screen name="GalleryEvent" component={GalleryEventScreen} />
+          <Stack.Screen name="PrayerActivities" component={PrayerActivitiesScreen} />
+          <Stack.Screen name="CleanlinessHero"  component={CleanlinessHeroScreen} />
         </Stack.Navigator>
       </View>
       <HomeBar />

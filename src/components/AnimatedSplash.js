@@ -28,7 +28,7 @@ export default function AnimatedSplash({ onFinish }) {
     <View style={[styles.root, { backgroundColor: SPLASH_BG }]}>
       {/* whole photo always visible, centered */}
       <Image source={SPLASH_IMG} resizeMode="contain" style={{ width: SW, height: SH }} />
-      <View style={[styles.track, { width: barW, bottom: SH * 0.06 }]}>
+      <View style={[styles.track, { width: barW, bottom: SH * 0.13 }]}>
         <Animated.View style={[styles.fill, { width: fillWidth }]} />
       </View>
     </View>

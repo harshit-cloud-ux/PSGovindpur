@@ -247,13 +247,7 @@ export default function HouseScreen({ navigation }) {
             })}
           </View>
 
-          <View style={s.section}>
-            <View style={s.secHead}><View style={s.secBar} /><Text style={s.secTitle}>आज की ड्यूटी</Text></View>
-            <Text style={s.secTitleEng}>Today's Duties · रोज़ बदलती है</Text>
-            <EditableText docId="duties" field="text"
-              emptyHi="आज की ड्यूटी अभी जोड़ी नहीं गई"
-              emptyEng="Duties not added yet" />
-          </View>
+          
         </ScrollView>
       ) : (
         <HouseDetail house={current} />

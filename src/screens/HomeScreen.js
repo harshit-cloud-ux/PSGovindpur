@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  Dimensions, Animated, Image, Pressable, TouchableOpacity, Modal,
+  Dimensions, Animated, Image, Pressable, TouchableOpacity, Modal, Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,9 @@ const CARD_W    = (width - 44) / 2;
 const IMG = {
   pm: require('../assets/images/pm.jpg'),
   cm: require('../assets/images/cm.jpg'),
+  staff1: require('../assets/images/staff-1.jpg'),
+  staff2: require('../assets/images/staff-2.jpg'),
+  staff3: require('../assets/images/staff-3.jpg'),
   schoolLogo: require('../assets/images/school-logo.png'),
   patriotic: [
     require('../assets/images/patriotic1.jpg'),
@@ -37,6 +40,8 @@ const QUICK_ACTIONS = [
   { icon: 'pencil',             label: 'गृहकार्य',         sublabel: 'Homework',        gradient: ['#6D28D9','#8B5CF6'], screen: 'Homework' },
   { icon: 'images', label: 'गैलरी', sublabel: 'Gallery', gradient: ['#BE185D','#EC4899'], screen: 'Gallery' },
   { icon: 'trophy',             label: 'हाउस',             sublabel: 'House',           gradient: ['#B45309','#F59E0B'], screen: 'House' },
+  { icon: 'sparkles',           label: 'प्रार्थना गतिविधियां',   sublabel: 'Prayer Activities',  gradient: ['#7C2D12','#EA580C'], screen: 'PrayerActivities' },
+  { icon: 'leaf',               label: 'स्वच्छता वीर',          sublabel: 'Cleanliness Hero',   gradient: ['#0A6B0A','#1AA81A'], screen: 'CleanlinessHero' },
   { icon: 'library', label: 'ई-पुस्तकें व वीडियो', sublabel: 'E-Books & Videos', gradient: ['#065F46','#0EA5E9'], screen: 'EbooksVideos' },
   { icon: 'calendar', label: 'वार्षिक कैलेंडर', sublabel: 'Annual Calendar', gradient: ['#7C3AED','#A855F7'], screen: 'Calendar' },
   { icon: 'flag', label: 'अवकाश तालिका', sublabel: 'Holiday List', gradient: ['#9D174D','#DB2777'], screen: 'Holiday' },
@@ -73,9 +78,18 @@ function Ticker() {
   const ITEM_W = 260;
   const total  = TICKER.length * ITEM_W;
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(x, { toValue: -total, duration: TICKER.length * 3400, useNativeDriver: true })
-    ).start();
+    let anim;
+    const run = () => {
+      x.setValue(0);
+      anim = Animated.timing(x, {
+        toValue: -total,
+        duration: TICKER.length * 3400,
+        useNativeDriver: true,
+      });
+      anim.start(({ finished }) => { if (finished) run(); });
+    };
+    run();
+    return () => anim && anim.stop();
   }, []);
   return (
     <View style={tk.wrap}>
@@ -252,14 +266,18 @@ export default function HomeScreen({ navigation }) {
             <Text style={s.heroSub}>UDISE कोड: 09141101809</Text>
           </FadeIn>
 
-          <FadeIn delay={430} style={s.pills}>
-            {[['166','छात्र','Students'],['3','शिक्षक','Teachers'],['94%','उपस्थिति','Attendance']].map(([n,l,e]) => (
-              <View key={l} style={s.pill}>
-                <Text style={s.pillNum}>{n}</Text>
-                <Text style={s.pillLbl}>{l}</Text>
-                <Text style={s.pillEng}>{e}</Text>
-              </View>
-            ))}
+          <FadeIn delay={430} style={s.admissionWrap}>
+            <View style={s.admissionCard}>
+              <Text style={s.admissionHeading}>प्रवेश के लिए संपर्क करें</Text>
+              <TouchableOpacity
+                style={s.admissionBtn}
+                activeOpacity={0.85}
+                onPress={() => Linking.openURL('tel:7217037876')}
+              >
+                <Ionicons name="call" size={16} color={COLORS.navyDark} />
+                <Text style={s.admissionBtnText}>7217037876</Text>
+              </TouchableOpacity>
+            </View>
           </FadeIn>
 
           <FadeIn delay={580} style={s.datePill}>
@@ -275,41 +293,47 @@ export default function HomeScreen({ navigation }) {
         </FadeIn>
 
         <FadeIn delay={250} style={s.leaderWrap}>
+          {/* tricolour top stripes */}
+          <View style={s.triStripe}>
+            <View style={[s.triBand, { backgroundColor: '#FF9933' }]} />
+            <View style={[s.triBand, { backgroundColor: '#FFFFFF' }]} />
+            <View style={[s.triBand, { backgroundColor: '#138808' }]} />
+          </View>
+
           <LinearGradient
-            colors={['#060F24','#0F2347','#1A3A6B']}
+            colors={['#0F2347', '#1A3A6B', '#2D5AA0']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={s.leaderCard}
+            style={s.staffCard}
           >
-            <Text style={s.leaderHeading}>🇮🇳  राष्ट्रीय नेतृत्व</Text>
-            <View style={s.leaderRow}>
-              <View style={s.leader}>
-                <View style={s.photoFrame}>
-                  <Image source={IMG.pm} style={[s.photoImg, { transform: [{ scale: 1.18 }, { translateY: 6 }] }]} />
-                </View>
-                <Text style={s.leaderName}>श्री नरेन्द्र मोदी</Text>
-                <Text style={s.leaderRole}>प्रधानमंत्री, भारत</Text>
-              </View>
-              <View style={s.leaderSep}>
-                <View style={s.sepLine} />
-                <View style={s.sepBadge}><Text style={{ fontSize: 22 }}>🔱</Text></View>
-                <View style={s.sepLine} />
-              </View>
-              <View style={s.leader}>
-                <View style={s.photoFrame}>
-                  <Image source={IMG.cm} style={s.photoImg} />
-                </View>
-                <Text style={s.leaderName}>श्री योगी आदित्यनाथ</Text>
-                <Text style={s.leaderRole}>मुख्यमंत्री, उ.प्र.</Text>
+            <Text style={s.staffHeading}>हमारे शिक्षक  ·  OUR TEACHERS</Text>
+
+            {/* triangle: 1 on top, 2 below */}
+            <View style={s.staffTop}>
+              <View style={s.staffCircle}>
+                <Image source={IMG.staff1} style={s.staffImgHead} />
               </View>
             </View>
+            <View style={s.staffBottomRow}>
+              <View style={s.staffCircle}>
+                <Image source={IMG.staff2} style={s.staffImg} />
+              </View>
+              <View style={s.staffCircle}>
+                <Image source={IMG.staff3} style={s.staffImg} />
+              </View>
+            </View>
+
+            <Text style={s.staffTagline}>जाग रहा है जन गण मन, निश्चित होगा परिवर्तन</Text>
           </LinearGradient>
+
+          {/* tricolour bottom stripes */}
+          <View style={s.triStripe}>
+            <View style={[s.triBand, { backgroundColor: '#FF9933' }]} />
+            <View style={[s.triBand, { backgroundColor: '#FFFFFF' }]} />
+            <View style={[s.triBand, { backgroundColor: '#138808' }]} />
+          </View>
         </FadeIn>
 
-        <View style={s.section}>
-          <View style={s.secHead}>
-            <View style={s.secBar} />
-            <Text style={s.secTitle}>त्वरित पहुँच</Text>
-          </View>
+        <View style={[s.section, { paddingTop: 18 }]}>
           <View style={s.grid}>
             {QUICK_ACTIONS.map((a, i) => (
               <ActionCard
@@ -394,8 +418,8 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   heroLabel: { color: COLORS.saffronLight, fontSize: 14, fontFamily: 'NotoSansDevanagari_400Regular', textAlign: 'center', letterSpacing: 1 },
-  heroName:  { color: '#fff', fontSize: 44, fontFamily: 'NotoSansDevanagari_700Bold', textAlign: 'center', lineHeight: 54, marginTop: 2 },
-  heroSub:   { color: '#8EB4D8', fontSize: 11, textAlign: 'center', marginTop: 6 },
+  heroName: { color: '#fff', fontSize: 44, fontFamily: 'NotoSansDevanagari_700Bold', textAlign: 'center', lineHeight: 64, marginTop: 14 },
+  heroSub:   { color: '#8EB4D8', fontSize: 18, textAlign: 'center', marginTop: 6 },
 
   pills:     { flexDirection: 'row', gap: 10, marginTop: 20 },
   pill: {
@@ -410,11 +434,10 @@ const s = StyleSheet.create({
   datePill: {
     flexDirection: 'row', alignItems: 'center', marginTop: 16,
     backgroundColor: 'rgba(255,255,255,0.07)',
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
   },
-  dateText:  { color: COLORS.saffronLight, fontSize: 11, fontFamily: 'NotoSansDevanagari_400Regular' },
-
+  dateText: { color: COLORS.saffronLight, fontSize: 14, fontFamily: 'NotoSansDevanagari_400Regular' },
   bannerOuter: { marginHorizontal: 16, marginTop: 18 },
   bannerWrap: {
     height: 150, borderRadius: 16, overflow: 'hidden',
@@ -491,4 +514,57 @@ const s = StyleSheet.create({
   },
   ctaMain: { color: '#fff', fontSize: 15, fontFamily: 'NotoSansDevanagari_700Bold' },
   ctaSub:  { color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 2 },
+
+  admissionCard:    { borderRadius: 18, padding: 22, alignItems: 'center', elevation: 6, shadowColor: '#0A6B0A', shadowOpacity: 0.3, shadowRadius: 10 },
+  admissionHeading: { color: '#fff', fontSize: 18, fontFamily: 'NotoSansDevanagari_700Bold' },
+  admissionSub:     { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 6, textAlign: 'center', fontFamily: 'NotoSansDevanagari_400Regular' },
+  admissionBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 24, paddingVertical: 11, marginTop: 16 },
+  admissionBtnText: { color: '#0A6B0A', fontSize: 17, fontWeight: '800', letterSpacing: 0.5 },
+  admissionMotto:   { color: '#fff', fontSize: 13, fontStyle: 'italic', marginTop: 16, textAlign: 'center', fontFamily: 'NotoSansDevanagari_400Regular' },
+
+  admissionWrap: { width: '100%', marginTop: 20, paddingHorizontal: 4 },
+  admissionCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 22, paddingVertical: 10, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4,
+  },
+  admissionHeading: { color: COLORS.saffronLight, fontSize: 16, fontFamily: 'NotoSansDevanagari_700Bold', flexShrink: 1 },
+  admissionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  admissionBtnText: { color: COLORS.navyDark, fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
+
+  triStripe: { flexDirection: 'row', height: 8 },
+  triBand:   { flex: 1 },
+
+  staffCard:    { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 18, alignItems: 'center' },
+  staffHeading: { color: COLORS.saffronLight, fontSize: 13, fontFamily: 'NotoSansDevanagari_700Bold', textAlign: 'center', marginBottom: 14, letterSpacing: 1 },
+
+  staffTop:       { alignItems: 'center', marginBottom: 12 },
+  staffBottomRow: { flexDirection: 'row', justifyContent: 'center', gap: 22 },
+
+  staffCircle: {
+    width: 118, height: 118, borderRadius: 59,
+    borderWidth: 3, borderColor: COLORS.gold,
+    overflow: 'hidden',
+    backgroundColor: '#0A1628',
+    elevation: 6, shadowColor: COLORS.gold, shadowOpacity: 0.4, shadowRadius: 8,
+  },
+
+  staffTagline: {
+    color: '#FFECC2', fontSize: 15, fontFamily: 'NotoSansDevanagari_700Bold',
+    textAlign: 'center', marginTop: 14, lineHeight: 23,
+    fontStyle: 'italic',
+  },
+
+  staffImgHead: {
+    width: '100%', height: '108%',    // staff-1 (principal) — matches AboutStaff head card
+    resizeMode: 'cover',
+  },
+  staffImg: {
+    width: '100%', height: '140%',    // staff-2, staff-3 — anchored to top, no head-chop
+    resizeMode: 'cover',
+  },
 });

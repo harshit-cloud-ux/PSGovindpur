@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Alert, RefreshControl, Image
+  ActivityIndicator, Alert, RefreshControl, Image, Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +47,11 @@ export default function RegistrationListScreen({ navigation }) {
   };
 
   const editForm = (rec) => navigation.navigate('Registration', { editRecord: rec, docId: rec.id });
+
+  const openDocs = async (url) => {
+    try { await Linking.openURL(url); }
+    catch (e) { Alert.alert('त्रुटि', 'लिंक नहीं खोला जा सका।'); }
+  };
 
   const confirmDelete = (rec) => {
     Alert.alert(
@@ -106,6 +111,11 @@ export default function RegistrationListScreen({ navigation }) {
                   <ActivityIndicator color={COLORS.navyPrimary} style={{ paddingVertical: 6 }} />
                 ) : (
                   <>
+                    {rec.documents_url ? (
+                      <TouchableOpacity style={[s.btn, s.btnDocs]} onPress={() => openDocs(rec.documents_url)}>
+                        <Ionicons name="folder-open-outline" size={16} color={COLORS.navyPrimary} /><Text style={[s.btnTxt,{color:COLORS.navyPrimary}]}>डॉक्युमेंट्स</Text>
+                      </TouchableOpacity>
+                    ) : null}
                     <TouchableOpacity style={[s.btn, s.btnView]} onPress={() => viewPdf(rec)}>
                       <Ionicons name="eye-outline" size={16} color={COLORS.navyPrimary} /><Text style={[s.btnTxt,{color:COLORS.navyPrimary}]}>देखें</Text>
                     </TouchableOpacity>
@@ -146,8 +156,9 @@ const s = StyleSheet.create({
   name:        { fontSize:16, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyDark },
   meta:        { fontSize:12, color:COLORS.inkSoft, marginTop:2, fontFamily:'NotoSansDevanagari_400Regular' },
   metaSub:     { fontSize:11, color:COLORS.inkLight, marginTop:1, fontFamily:'NotoSansDevanagari_400Regular' },
-  actions:     { flexDirection:'row', gap:8, marginTop:12, justifyContent:'flex-end' },
+  actions:     { flexDirection:'row', flexWrap:'wrap', gap:8, marginTop:12, justifyContent:'flex-end' },
   btn:         { flexDirection:'row', alignItems:'center', gap:5, paddingHorizontal:12, paddingVertical:8, borderRadius:8, borderWidth:1 },
+  btnDocs:     { backgroundColor:'#FEF3C7', borderColor:'#FDE68A' },
   btnView:     { backgroundColor:'#EFF6FF', borderColor:'#BFDBFE' },
   btnEdit:     { backgroundColor:'#F0FDF4', borderColor:'#BBF7D0' },
   btnDel:      { backgroundColor:'#FEF2F2', borderColor:'#FCA5A5' },

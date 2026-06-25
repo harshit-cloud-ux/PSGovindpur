@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Linking, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,13 +7,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../theme/colors';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
-import * as WebBrowser from 'expo-web-browser';
 
-const CLOUD_NAME    = 'dgjxqjvbv';
-const UPLOAD_PRESET = 'ps_govindpur';
-const COLLECTION    = 'homework';
+const COLLECTION = 'homework';
 
 const CLASSES = [
   { n: 1, hi: 'कक्षा 1', eng: 'Class 1', color: '#1A3A6B' },
@@ -23,24 +18,15 @@ const CLASSES = [
   { n: 5, hi: 'कक्षा 5', eng: 'Class 5', color: '#BE185D' },
 ];
 
-async function uploadToCloudinary(uri, type) {
-  const ext  = uri.split('.').pop().toLowerCase();
-  const mime = type === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : 'image/jpeg';
-  const form = new FormData();
-  form.append('file', { uri, type: mime, name: `homework.${ext}` });
-  form.append('upload_preset', UPLOAD_PRESET);
-  form.append('folder', 'ps_govindpur/homework');
-  const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: form });
-  const data = await res.json();
-  if (!data.secure_url) throw new Error(data.error?.message || 'Upload failed');
-  return { url: data.secure_url, kind: type };
-}
+const isLikelyUrl = (s) => /^https?:\/\//i.test((s || '').trim());
 
-function UploadBlock({ docId, title, accent }) {
-  const { isAdmin } = useAuth();
-  const [entry,     setEntry]     = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [uploading, setUploading] = useState(false);
+function LinkBlock({ docId, title, accent }) {
+  const { isAdmin }             = useAuth();
+  const [entry,    setEntry]    = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [editor,   setEditor]   = useState(false);
+  const [draft,    setDraft]    = useState('');
 
   useEffect(() => {
     let active = true;
@@ -51,98 +37,106 @@ function UploadBlock({ docId, title, accent }) {
     return () => { active = false; };
   }, [docId]);
 
-  const save = async (newEntry) => {
-    await setDoc(doc(db, COLLECTION, docId), newEntry);
-    setEntry(newEntry);
+  const saveLink = async () => {
+    const url = draft.trim();
+    if (!url) { Alert.alert('लिंक खाली है', 'कृपया Google Drive का लिंक पेस्ट करें।'); return; }
+    if (!isLikelyUrl(url)) { Alert.alert('अमान्य लिंक', 'पूरा लिंक पेस्ट करें (https:// से शुरू)।'); return; }
+    setSaving(true);
+    try {
+      const next = { url, updated_at: new Date().toISOString() };
+      await setDoc(doc(db, COLLECTION, docId), next);
+      setEntry(next);
+      setEditor(false);
+    } catch (e) {
+      Alert.alert('त्रुटि', e.message || 'सहेजना असफल।');
+    }
+    setSaving(false);
   };
 
-  const pickImage = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert('अनुमति चाहिए', 'फोटो एक्सेस की अनुमति दें।'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85 });
-    if (result.canceled) return;
-    setUploading(true);
-    try { await save(await uploadToCloudinary(result.assets[0].uri, 'image')); Alert.alert('सफल!', 'अपलोड हो गया।'); }
-    catch (e) { Alert.alert('त्रुटि', 'अपलोड नहीं हुआ। पुनः प्रयास करें।'); }
-    setUploading(false);
-  };
-
-  const pickPDF = async () => {
-    const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
-    if (result.canceled) return;
-    setUploading(true);
-    try { await save(await uploadToCloudinary(result.assets[0].uri, 'pdf')); Alert.alert('सफल!', 'PDF अपलोड हो गई।'); }
-    catch (e) { Alert.alert('त्रुटि', 'अपलोड नहीं हुआ। पुनः प्रयास करें।'); }
-    setUploading(false);
-  };
-
-  const removeEntry = () => {
-    Alert.alert('हटाएं?', 'क्या आप हटाना चाहते हैं?', [
+  const removeLink = () => {
+    Alert.alert('हटाएं?', 'क्या आप यह लिंक हटाना चाहते हैं?', [
       { text: 'नहीं', style: 'cancel' },
-      { text: 'हाँ, हटाएं', style: 'destructive', onPress: async () => { await save({ url: '', kind: '' }); } },
+      { text: 'हाँ, हटाएं', style: 'destructive', onPress: async () => {
+        setSaving(true);
+        try { await setDoc(doc(db, COLLECTION, docId), { url: '', updated_at: new Date().toISOString() }); setEntry({ url: '' }); }
+        catch (e) { Alert.alert('त्रुटि', e.message); }
+        setSaving(false);
+      }},
     ]);
   };
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
       <View style={s.secHead}><View style={[s.secBar,{backgroundColor:accent}]} /><Text style={s.secTitle}>{title}</Text></View>
-      <View style={{ height: 12 }} />
+      <Text style={s.secTitleEng}>Homework</Text>
 
       {isAdmin && (
         <View style={s.adminBox}>
-          <Text style={s.adminLabel}>व्यवस्थापक — अपलोड करें</Text>
-          {uploading ? (
-            <View style={s.uploadingBox}><ActivityIndicator color={accent} size="large" /><Text style={s.uploadingTxt}>अपलोड हो रहा है...</Text></View>
+          <Text style={s.adminLabel}>व्यवस्थापक — Google Drive लिंक</Text>
+          {saving ? (
+            <View style={s.uploadingBox}><ActivityIndicator color={accent} size="large" /><Text style={s.uploadingTxt}>सहेजा जा रहा है...</Text></View>
           ) : (
-            <View style={s.uploadBtns}>
-              <TouchableOpacity onPress={pickImage} style={[s.uploadBtn,{backgroundColor:accent}]}>
-                <Ionicons name="image-outline" size={20} color="#fff" />
-                <Text style={s.uploadBtnTxt}>फोटो</Text>
-                <Text style={s.uploadBtnSub}>JPG / PNG</Text>
+            <View style={{ gap: 10 }}>
+              <TouchableOpacity onPress={() => { setDraft(entry?.url || ''); setEditor(true); }} style={[s.linkBtn, { backgroundColor: accent }]} activeOpacity={0.85}>
+                <Ionicons name={entry?.url ? 'create-outline' : 'link-outline'} size={20} color="#fff" />
+                <Text style={s.linkBtnTxt}>{entry?.url ? 'लिंक बदलें' : 'लिंक जोड़ें'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={pickPDF} style={[s.uploadBtn,{backgroundColor:'#0F2347'}]}>
-                <Ionicons name="document-outline" size={20} color="#fff" />
-                <Text style={s.uploadBtnTxt}>PDF</Text>
-                <Text style={s.uploadBtnSub}>PDF फाइल</Text>
-              </TouchableOpacity>
+              {entry?.url ? (
+                <TouchableOpacity onPress={removeLink} style={s.removeBtn}>
+                  <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                  <Text style={s.removeBtnTxt}>हटाएं</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           )}
-          {entry?.url ? (
-            <TouchableOpacity onPress={removeEntry} style={s.removeBtn}>
-              <Ionicons name="trash-outline" size={15} color="#DC2626" />
-              <Text style={s.removeBtnTxt}>हटाएं</Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
       )}
 
       {loading ? (
         <View style={s.loaderBox}><ActivityIndicator color={accent} /></View>
       ) : entry?.url ? (
-        entry.kind === 'image' ? (
-          <View style={s.imageCard}>
-            <Image source={{ uri: entry.url }} style={s.docImage} resizeMode="contain" />
-            <TouchableOpacity onPress={() => Linking.openURL(entry.url)} style={s.openFullBtn}>
-              <Ionicons name="expand-outline" size={16} color={COLORS.navyPrimary} />
-              <Text style={s.openFullTxt}>पूर्ण स्क्रीन में देखें</Text>
-            </TouchableOpacity>
+        <TouchableOpacity activeOpacity={0.85} onPress={() => Linking.openURL(entry.url)} style={[s.linkCard, { borderLeftColor: accent }]}>
+          <View style={[s.linkIcon,{backgroundColor:accent}]}><Ionicons name="logo-google" size={22} color="#fff" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.linkTitle}>{title} गृहकार्य</Text>
+            <Text style={s.linkSub}>टैप करें · Google Drive में खोलें</Text>
           </View>
-        ) : (
-          <TouchableOpacity activeOpacity={0.85} onPress={() => WebBrowser.openBrowserAsync(entry.url)} style={s.pdfCard}>
-            <View style={[s.pdfIcon,{backgroundColor:accent}]}><Ionicons name="document-text" size={26} color="#fff" /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.pdfTitle}>{title} PDF</Text>
-              <Text style={s.pdfSub}>टैप करें · PDF खोलें</Text>
-            </View>
-            <Ionicons name="open-outline" size={22} color={accent} />
-          </TouchableOpacity>
-        )
+          <Ionicons name="open-outline" size={22} color={accent} />
+        </TouchableOpacity>
       ) : (
         <View style={s.emptyCard}>
           <Ionicons name="information-circle-outline" size={20} color={COLORS.inkLight} />
           <Text style={s.emptyTxt}>शीघ्र उपलब्ध होगा</Text>
         </View>
       )}
+
+      <Modal visible={editor} transparent animationType="slide" onRequestClose={() => setEditor(false)}>
+        <KeyboardAvoidingView style={s.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Google Drive लिंक</Text>
+            <Text style={s.modalHint}>Drive पर "Anyone with the link · Viewer" साझा करें, फिर लिंक यहाँ पेस्ट करें।</Text>
+            <TextInput
+              style={s.urlInput}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="https://drive.google.com/..."
+              placeholderTextColor={COLORS.inkLight}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              multiline
+            />
+            <View style={s.modalActions}>
+              <TouchableOpacity style={[s.modalBtn, { backgroundColor: '#E7E5E4' }]} onPress={() => setEditor(false)}>
+                <Text style={[s.modalBtnTxt, { color: COLORS.inkSoft }]}>रद्द करें</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.modalBtn, { backgroundColor: COLORS.green }]} onPress={saveLink}>
+                <Text style={s.modalBtnTxt}>सहेजें</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -202,7 +196,7 @@ export default function HomeworkScreen({ navigation }) {
           </View>
         </ScrollView>
       ) : (
-        <UploadBlock docId={`class${CLASSES[selClass].n}`} title={CLASSES[selClass].hi} accent={CLASSES[selClass].color} />
+        <LinkBlock docId={`class${CLASSES[selClass].n}`} title={CLASSES[selClass].hi} accent={CLASSES[selClass].color} />
       )}
     </View>
   );
@@ -233,23 +227,26 @@ const s = StyleSheet.create({
   classCardSub: { fontSize:12, color:COLORS.inkLight, marginTop:2, fontFamily:'NotoSansDevanagari_400Regular' },
   adminBox:     { backgroundColor:'#fff', borderRadius:16, padding:16, elevation:2, shadowColor:'#000', shadowOpacity:0.06, shadowRadius:6, borderLeftWidth:4, borderLeftColor:COLORS.saffron, marginBottom:14 },
   adminLabel:   { fontSize:13, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyDark, marginBottom:12 },
-  uploadBtns:   { flexDirection:'row', gap:12 },
-  uploadBtn:    { flex:1, borderRadius:14, padding:14, alignItems:'center', gap:5 },
-  uploadBtnTxt: { color:'#fff', fontSize:15, fontFamily:'NotoSansDevanagari_700Bold' },
-  uploadBtnSub: { color:'rgba(255,255,255,0.7)', fontSize:11 },
+  linkBtn:      { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8, borderRadius:14, paddingVertical:13, paddingHorizontal:16 },
+  linkBtnTxt:   { color:'#fff', fontSize:14, fontFamily:'NotoSansDevanagari_700Bold' },
   uploadingBox: { alignItems:'center', padding:18, gap:10 },
   uploadingTxt: { fontSize:14, color:COLORS.inkSoft, fontFamily:'NotoSansDevanagari_400Regular' },
-  removeBtn:    { flexDirection:'row', alignItems:'center', gap:6, marginTop:12, alignSelf:'flex-start' },
+  removeBtn:    { flexDirection:'row', alignItems:'center', gap:6, marginTop:6, alignSelf:'flex-start' },
   removeBtnTxt: { fontSize:13, color:'#DC2626', fontFamily:'NotoSansDevanagari_400Regular' },
   loaderBox:    { padding:30, alignItems:'center' },
-  imageCard:    { backgroundColor:'#fff', borderRadius:16, overflow:'hidden', elevation:3, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:8 },
-  docImage:     { width:'100%', height:440 },
-  openFullBtn:  { flexDirection:'row', alignItems:'center', gap:6, padding:12, justifyContent:'center', borderTopWidth:1, borderTopColor:'#F0EAE0' },
-  openFullTxt:  { fontSize:13, color:COLORS.navyPrimary, fontFamily:'NotoSansDevanagari_700Bold' },
-  pdfCard:      { flexDirection:'row', alignItems:'center', gap:14, backgroundColor:'#fff', borderRadius:14, padding:18, elevation:2, shadowColor:'#000', shadowOpacity:0.08, shadowRadius:6, borderLeftWidth:4, borderLeftColor:'#0F2347' },
-  pdfIcon:      { width:50, height:50, borderRadius:14, alignItems:'center', justifyContent:'center' },
-  pdfTitle:     { fontSize:16, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyDark },
-  pdfSub:       { fontSize:12, color:COLORS.inkLight, marginTop:3, fontFamily:'NotoSansDevanagari_400Regular' },
+  linkCard:     { flexDirection:'row', alignItems:'center', gap:14, backgroundColor:'#fff', borderRadius:14, padding:18, elevation:2, shadowColor:'#000', shadowOpacity:0.08, shadowRadius:6, borderLeftWidth:4 },
+  linkIcon:     { width:50, height:50, borderRadius:14, alignItems:'center', justifyContent:'center' },
+  linkTitle:    { fontSize:16, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyDark },
+  linkSub:      { fontSize:12, color:COLORS.inkLight, marginTop:3, fontFamily:'NotoSansDevanagari_400Regular' },
   emptyCard:    { flexDirection:'row', alignItems:'center', gap:12, backgroundColor:'#F5F0E8', borderRadius:14, padding:18 },
   emptyTxt:     { fontSize:14, color:COLORS.inkLight, fontFamily:'NotoSansDevanagari_400Regular', fontStyle:'italic' },
+
+  modalBackdrop: { flex:1, backgroundColor:'rgba(0,0,0,0.55)', justifyContent:'flex-end' },
+  modalCard:     { backgroundColor:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, padding:22, paddingBottom:28 },
+  modalTitle:    { fontSize:18, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyPrimary, marginBottom:6 },
+  modalHint:     { fontSize:12, color:COLORS.inkSoft, fontFamily:'NotoSansDevanagari_400Regular', marginBottom:14 },
+  urlInput:      { minHeight:80, maxHeight:140, borderWidth:1.5, borderColor:COLORS.border, borderRadius:12, padding:14, fontSize:14, color:COLORS.ink, backgroundColor:COLORS.paper, textAlignVertical:'top' },
+  modalActions:  { flexDirection:'row', gap:10, marginTop:18 },
+  modalBtn:      { flex:1, paddingVertical:14, borderRadius:12, alignItems:'center' },
+  modalBtnTxt:   { color:'#fff', fontSize:15, fontFamily:'NotoSansDevanagari_700Bold' },
 });

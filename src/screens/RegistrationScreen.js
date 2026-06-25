@@ -28,6 +28,7 @@ const BLANK = {
   perm_mohalla:'', perm_village:'', perm_post:'', perm_district:'', perm_state:'उत्तर प्रदेश', perm_pin:'',
   curr_mohalla:'', curr_village:'', curr_post:'', curr_district:'', curr_state:'', curr_pin:'',
   guardian_name:'', guardian_rel:'', guardian_mobile:'',
+  documents_url:'',
   siblings:[
     { name:'', rel:'', dob:'', school:'', reason:'' },
     { name:'', rel:'', dob:'', school:'', reason:'' },
@@ -380,6 +381,22 @@ export default function RegistrationScreen({ navigation, route }) {
               <Row><Field label="जन्मतिथि" value={sib.dob} onChangeText={setSibling(i,'dob')} placeholder="DD-MM-YYYY" /><Field label="नामांकित विद्यालय" value={sib.school} onChangeText={setSibling(i,'school')} /></Row>
             </View>
           ))}
+          <SecHead num="11" title="डॉक्युमेंट्स (Google Drive)" />
+          <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+            <Text style={{ fontSize: 11, color: COLORS.inkLight, marginBottom: 8, fontFamily: 'NotoSansDevanagari_400Regular' }}>
+              Drive फ़ोल्डर का लिंक यहाँ पेस्ट करें। "Anyone with the link · Viewer" साझा करना सुनिश्चित करें।
+            </Text>
+            <Row>
+              <Field
+                label="Google Drive लिंक"
+                value={form.documents_url}
+                onChangeText={set('documents_url')}
+                placeholder="https://drive.google.com/..."
+                keyboardType="url"
+                autoCapitalize="none"
+              />
+            </Row>
+          </View>
           <View style={s.declarationBox}>
             <Text style={s.declarationTitle}>अभिभावक की घोषणा</Text>
             <Text style={s.declarationBody}>मेरे द्वारा अपने पुत्र/पुत्री/पाल्य तथा उसके माता-पिता/अभिभावक के सन्दर्भ में यहाँ पर दी गयी सभी सूचनाएँ की भली-भाँति जाँच कर ली गयी है। सभी सूचनाएँ पूर्णतया सत्य हैं।{'\n\n'}{CONSENT}</Text>
