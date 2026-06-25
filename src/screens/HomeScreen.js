@@ -29,7 +29,11 @@ const IMG = {
     require('../assets/images/patriotic4.jpg'),
     require('../assets/images/patriotic5.jpg'),
     require('../assets/images/patriotic6.jpg'),
-    require('../assets/images/patriotic7.jpg'),
+    require('../assets/images/patriotic8.jpg'),
+    require('../assets/images/patriotic10.jpg'),
+    require('../assets/images/patriotic11.jpg'),
+    require('../assets/images/patriotic12.jpg'),
+    require('../assets/images/patriotic13.jpg'),
   ],
 };
 
@@ -309,16 +313,28 @@ export default function HomeScreen({ navigation }) {
 
             {/* triangle: 1 on top, 2 below */}
             <View style={s.staffTop}>
-              <View style={s.staffCircle}>
-                <Image source={IMG.staff1} style={s.staffImgHead} />
+              <View style={s.staffMember}>
+                <View style={s.staffCircle}>
+                  <Image source={IMG.staff1} style={s.staffImgHead} />
+                </View>
+                <Text style={s.staffName}>श्री रविंद्र चौधरी</Text>
+                <Text style={s.staffRole}>प्रधानाध्यापक</Text>
               </View>
             </View>
             <View style={s.staffBottomRow}>
-              <View style={s.staffCircle}>
-                <Image source={IMG.staff2} style={s.staffImg} />
+              <View style={s.staffMember}>
+                <View style={s.staffCircle}>
+                  <Image source={IMG.staff2} style={s.staffImg} />
+                </View>
+                <Text style={s.staffName}>श्रीमती अंजना राना</Text>
+                <Text style={s.staffRole}>सहायक अध्यापक</Text>
               </View>
-              <View style={s.staffCircle}>
-                <Image source={IMG.staff3} style={s.staffImg} />
+              <View style={s.staffMember}>
+                <View style={s.staffCircle}>
+                  <Image source={IMG.staff3} style={s.staffImg} />
+                </View>
+                <Text style={s.staffName}>श्रीमती योगेश चौधरी</Text>
+                <Text style={s.staffRole}>शिक्षामित्र</Text>
               </View>
             </View>
 
@@ -539,11 +555,11 @@ const s = StyleSheet.create({
   triStripe: { flexDirection: 'row', height: 8 },
   triBand:   { flex: 1 },
 
-  staffCard:    { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 18, alignItems: 'center' },
+  staffCard: { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 32, alignItems: 'center' },
   staffHeading: { color: COLORS.saffronLight, fontSize: 13, fontFamily: 'NotoSansDevanagari_700Bold', textAlign: 'center', marginBottom: 14, letterSpacing: 1 },
 
   staffTop:       { alignItems: 'center', marginBottom: 12 },
-  staffBottomRow: { flexDirection: 'row', justifyContent: 'center', gap: 22 },
+  staffBottomRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
 
   staffCircle: {
     width: 118, height: 118, borderRadius: 59,
@@ -554,9 +570,9 @@ const s = StyleSheet.create({
   },
 
   staffTagline: {
-    color: '#FFECC2', fontSize: 15, fontFamily: 'NotoSansDevanagari_700Bold',
-    textAlign: 'center', marginTop: 14, lineHeight: 23,
-    fontStyle: 'italic',
+    color: '#FFECC2', fontSize: 18, fontFamily: 'NotoSansDevanagari_700Bold',
+    textAlign: 'center', marginTop: 28, lineHeight: 23,
+    fontStyle: 'italic', textDecorationLine: 'underline',
   },
 
   staffImgHead: {
@@ -567,4 +583,8 @@ const s = StyleSheet.create({
     width: '100%', height: '140%',    // staff-2, staff-3 — anchored to top, no head-chop
     resizeMode: 'cover',
   },
+
+  staffMember:  { alignItems: 'center', width: 130 },
+  staffName: { color: '#FFECC2', fontSize: 13, fontFamily: 'NotoSansDevanagari_700Bold', textAlign: 'center', marginTop: 8, lineHeight: 18 },
+  staffRole: { color: 'rgba(255,236,194,0.75)', fontSize: 11, fontFamily: 'NotoSansDevanagari_400Regular', textAlign: 'center', marginTop: 2, lineHeight: 15 },
 });
