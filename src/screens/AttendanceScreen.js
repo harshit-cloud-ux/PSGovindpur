@@ -489,7 +489,7 @@ const s = StyleSheet.create({
   listHeadTxt:  { fontSize:15, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyDark },
   viewRow:      { flexDirection:'row', alignItems:'center', gap:10, paddingVertical:9, borderBottomWidth:1, borderBottomColor:'#F5F5F4' },
   viewNum:      { width:24, color:COLORS.inkLight, fontSize:13, fontWeight:'700', textAlign:'center' },
-  viewName:     { flex:1, fontSize:14, fontFamily:'NotoSansDevanagari_400Regular', color:COLORS.ink },
+  viewName: { flex:1, fontSize:16, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.ink },
   badgePresent: { backgroundColor:'#DCFCE7', paddingHorizontal:10, paddingVertical:4, borderRadius:8 },
   badgeAbsent:  { backgroundColor:'#FEE2E2', paddingHorizontal:10, paddingVertical:4, borderRadius:8 },
   badgeTxt:     { fontSize:11, fontFamily:'NotoSansDevanagari_700Bold', color:COLORS.navyDark },
