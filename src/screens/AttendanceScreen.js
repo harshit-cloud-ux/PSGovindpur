@@ -226,7 +226,6 @@ function AttendanceTaker({ classN, date, roster, accent, onSubmitted }) {
         classN, date, status,
         present:presentNames,
         absent:absentStudents.map(s=>s.name),
-        absentWithPhone:absentStudents.filter(s=>s.phone&&s.phone.length>=10).map(s=>({name:s.name,phone:s.phone})),
         total:students.length,
         submitted_at:new Date().toISOString(),
       });
@@ -290,7 +289,7 @@ function AttendanceTaker({ classN, date, roster, accent, onSubmitted }) {
 
 // ─── ATTENDANCE VIEWER ────────────────────────────────────────────────────────
 // isAdmin prop controls whether SMS button is shown
-function AttendanceViewer({ classN, date, accent, isAdmin }) {
+function AttendanceViewer({ classN, date, accent, isAdmin, roster }) {
   const [data,setData]=useState(null); const [loading,setLoading]=useState(true);
 
   useEffect(()=>{
@@ -315,8 +314,10 @@ function AttendanceViewer({ classN, date, accent, isAdmin }) {
     </View>
   );
 
-  const absentWithPhone=data.absentWithPhone||[];
-
+  // always look up phone numbers live from the current roster — never from the stored doc
+  const absentWithPhone=(data.absent||[])
+    .map(name=>({ name, phone: (roster||[]).find(s=>s.name===name)?.phone||'' }))
+    .filter(s=>s.phone&&s.phone.length>=10);
   return (
     <ScrollView contentContainerStyle={{padding:16,paddingBottom:40}}>
       <View style={[s.summaryBar,{backgroundColor:accent,borderRadius:14,marginBottom:16}]}>
@@ -421,7 +422,7 @@ function ClassScreen({ cls, roster, onBack }) {
       {/* admin sees taker or viewer; student always sees viewer */}
       {isAdmin && !viewMode
         ? <AttendanceTaker classN={cls.n} date={date} roster={roster} accent={cls.color} onSubmitted={handleSubmitted}/>
-        : <AttendanceViewer classN={cls.n} date={date} accent={cls.color} isAdmin={isAdmin}/>
+        : <AttendanceViewer classN={cls.n} date={date} accent={cls.color} isAdmin={isAdmin} roster={roster}/>
       }
 
       <DatePickerModal visible={pickerOpen} initial={date} onPick={handleDateChange} onClose={()=>setPickerOpen(false)}/>
